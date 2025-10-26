@@ -17,5 +17,22 @@
   "bugs": {
     "url": "https://github.com/lash0000/ws-monica/issues"
   },
-  "homepage": "https://github.com/lash0000/ws-monica#readme"
+  "homepage": "https://github.com/lash0000/ws-monica#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.3",
+    "email-templates": "^12.0.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^7.0.9",
+    "openai": "^6.6.0",
+    "pg": "^8.16.3",
+    "pg-hstore": "^2.3.4",
+    "pug": "^3.0.3",
+    "sequelize": "^6.37.7",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
 }
