@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "socket": "node socket_client.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -20,9 +23,11 @@
   "homepage": "https://github.com/lash0000/ws-monica#readme",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.3",
     "email-templates": "^12.0.3",
     "express": "^5.1.0",
+    "geoip-lite": "^1.4.10",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^7.0.9",
     "openai": "^6.6.0",
@@ -31,6 +36,7 @@
     "pug": "^3.0.3",
     "sequelize": "^6.37.7",
     "socket.io": "^4.8.1",
+    "useragent": "^2.3.0",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

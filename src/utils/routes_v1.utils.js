@@ -1,18 +1,11 @@
 const express = require('express');
+const router = express.Router();
 
-class MainRoutes {
-  constructor() {
-    this.router = express.Router();
-    this.RegisterRoutes(this.router);
-  }
+// Import route groups
+const userCredsRoutes = require('../modules/user_creds/user_creds.rt');
+const f_authMiddleware = require('../middlewares/auth.mw');
 
-  RegisterRoutes(router) {
-    // router.use('/files', FilesRoutes);
-  }
+// Register route groups
+router.use('/user-creds', userCredsRoutes);
 
-  getRouter() {
-    return this.router;
-  }
-}
-
-module.exports = new MainRoutes().getRouter();
+module.exports = router;
