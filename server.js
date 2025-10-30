@@ -10,6 +10,13 @@ app.use(cors());
 app.use(express.json());
 app.use('/api/v1/data', routesV1);
 
+app.get('/', (req, res) => {
+  res.status(200).json({
+    message: 'Socket.IO Server is running and ready!',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] },
