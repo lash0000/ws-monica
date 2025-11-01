@@ -2,17 +2,18 @@ const userCredsService = require('./user_creds.srv');
 
 class UserCredsController {
   /**
-   * GET /api/v1/user-creds/verify
-   * Verifies refresh token and session validity.
-   */
+  * POST /api/v1/user-creds/verify
+  * Verifies session validity using session_id
+  */
   async verify(req, res) {
     try {
-      const refreshToken = req.headers['x-refresh-token'];
-      if (!refreshToken) {
-        return res.status(400).json({ message: 'Missing refresh token' });
+      const { sessionId } = req.body;
+
+      if (!sessionId) {
+        return res.status(400).json({ message: 'Missing session_id in request body' });
       }
 
-      const { session, decoded } = await userCredsService.f_validateSession(refreshToken);
+      const { session } = await userCredsService.f_validateSession(sessionId);
 
       // Compute remaining lifetime (days left)
       const createdAt = new Date(session.createdAt);
@@ -23,8 +24,7 @@ class UserCredsController {
       return res.status(200).json({
         message: 'Session verified successfully',
         session_id: session.session_id,
-        user_id: decoded.user_id,
-        email: decoded.email,
+        user_id: session.user_id,
         createdAt: session.createdAt,
         daysLeft,
       });

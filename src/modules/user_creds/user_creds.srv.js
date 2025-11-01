@@ -12,24 +12,17 @@ class UserCredsService extends UserSessionsService {
    * Validate a session using session_id instead of refresh_token
    */
   async f_validateSession(sessionId) {
-    try {
-      if (!sessionId) throw new Error('Session ID required');
+    if (!sessionId) throw new Error('Session ID required');
+    const session = await this.f_findBySessionId(sessionId);
 
-      // Check if session exists
-      const session = await this.f_findBySessionId(sessionId);
+    const createdAt = new Date(session.createdAt);
+    const now = new Date();
+    const diffDays = (now - createdAt) / (1000 * 60 * 60 * 24);
 
-      // Lifetime check (15 days from createdAt)
-      const createdAt = new Date(session.createdAt);
-      const now = new Date();
-      const diffDays = (now - createdAt) / (1000 * 60 * 60 * 24);
+    if (diffDays > 15) throw new Error('Session expired (15-day lifetime ended)');
+    if (session.logout_date) throw new Error('Session invalid — user logged out');
 
-      if (diffDays > 15) throw new Error('Session expired (15-day lifetime ended)');
-      if (session.logout_date) throw new Error('Session invalid — user logged out');
-
-      return { session };
-    } catch (err) {
-      throw new Error(`Session validation failed: ${err.message}`);
-    }
+    return { session };
   }
 }
 
