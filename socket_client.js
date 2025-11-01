@@ -1,24 +1,25 @@
 const { io } = require('socket.io-client');
+const port = process.env.PORT || 8080;
+const host = `http://localhost:${port}`;
 
-const socket = io('http://localhost:3000', {
+console.log(`🔗 Connecting internal client to: ${host}`);
+
+const socket = io(host, {
   transports: ['websocket'],
 });
 
 socket.on('connect', () => {
-  console.log(`Connected to Socket.IO server as client ID: ${socket.id}`);
+  console.log(`✅ Connected to Socket.IO server as client ID: ${socket.id}`);
 });
 
-socket.on('server:heartbeat', (data) => {
-  console.log(`💓 Heartbeat from server:`, data);
-});
 socket.on('server:session_count', (data) => {
   console.log(`👥 Active sessions now: ${data.activeSession}`);
 });
-setInterval(() => {
-  socket.emit('client:ping', { message: 'Ping from test client' }, (response) => {
-    console.log('↩️ Pong response:', response);
-  });
-}, 5000);
+
 socket.on('disconnect', (reason) => {
   console.log(`❌ Disconnected from server (${reason})`);
+});
+
+socket.on('connect_error', (err) => {
+  console.error('❌ Connection error:', err.message);
 });

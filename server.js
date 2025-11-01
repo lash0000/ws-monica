@@ -15,7 +15,7 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] },
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 let activeSession = 0;
 
 const broadcastSessionCount = () => io.emit('server:session_count', { activeSession });
