@@ -11,6 +11,8 @@ const UserSessions = require('./src/modules/user_sessions/user_sessions.mdl');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.set('view engine', 'ejs');
+app.set('views', './views'); // use ./views folder
 app.use('/api/v1/data', routesV1);
 
 const server = http.createServer(app);
@@ -21,6 +23,7 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 8080;
 
 let dbSessionCount = 0;
+
 async function updateDBSessionCount() {
   try {
     const rows = await UserSessions.findAll({
@@ -35,7 +38,10 @@ async function updateDBSessionCount() {
     console.error('Failed to query user_sessions table:', err.message);
   }
 }
+
 updateDBSessionCount();
+
+// Run scheduled refresh every 3 minutes
 cron.schedule('*/3 * * * *', async () => {
   console.log('Running scheduled task: refresh user_sessions count');
   await updateDBSessionCount();
@@ -45,17 +51,18 @@ cron.schedule('*/3 * * * *', async () => {
   });
 });
 
+// Root route — render EJS template
 app.get('/', (req, res) => {
-  res.status(200).json({
+  res.render('dashboard', {
     project_name: 'Barangay Santa Monica Services with WebSockets',
     message: 'Socket.IO server is running and ready for connections.',
     version: '1.0.0',
     available_routes: ['/api/v1/data/...'],
-    user_sessions_length: dbSessionCount,
   });
 });
 
 app.set('io', io);
+
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
   socket.emit('server:session_count', { activeDBSessions: dbSessionCount });
