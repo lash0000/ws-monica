@@ -38,11 +38,9 @@ async function updateDBSessionCount() {
     console.error('Failed to query user_sessions table:', err.message);
   }
 }
-
 updateDBSessionCount();
 
-// Run scheduled refresh every 3 minutes
-cron.schedule('*/3 * * * *', async () => {
+cron.schedule('*/5 * * * *', async () => {
   console.log('Running scheduled task: refresh user_sessions count');
   await updateDBSessionCount();
   io.emit('server:heartbeat', {
@@ -50,12 +48,10 @@ cron.schedule('*/3 * * * *', async () => {
     activeDBSessions: dbSessionCount,
   });
 });
-
-// Root route — render EJS template
 app.get('/', (req, res) => {
   res.render('dashboard', {
     project_name: 'Barangay Santa Monica Services with WebSockets',
-    message: 'Socket.IO server is running and ready for connections.',
+    message: 'Socket.IO server is running and then watch it every 5 minutes.',
     version: '1.0.0',
     available_routes: ['/api/v1/data/...'],
   });

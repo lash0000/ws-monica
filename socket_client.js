@@ -28,7 +28,7 @@ socket.on('server:session_count', (data) => {
   console.log('Active sessions now:', data.activeDBSessions);
 });
 
-cron.schedule('*/3 * * * *', () => {
+cron.schedule('*/5 * * * *', () => {
   if (socket.connected) {
     console.log('Running scheduled client ping...');
     socket.emit('client:ping', { message: 'Ping from internal client (cron)' }, (response) => {
@@ -39,7 +39,7 @@ cron.schedule('*/3 * * * *', () => {
   }
 });
 
-cron.schedule('*/3 * * * *', () => {
+cron.schedule('*/5 * * * *', () => {
   const secondsSinceLast = Math.floor((Date.now() - lastHeartbeat) / 1000);
   if (secondsSinceLast > 180) {
     console.warn('No heartbeat received for over 3 minutes — possible connection issue.');
