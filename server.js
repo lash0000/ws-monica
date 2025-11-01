@@ -6,7 +6,6 @@ const { Server } = require('socket.io');
 const routesV1 = require('./src/utils/routes_v1.utils');
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 app.use('/api/v1/data', routesV1);
@@ -20,6 +19,7 @@ const PORT = process.env.PORT || 3000;
 let activeSession = 0;
 
 const broadcastSessionCount = () => io.emit('server:session_count', { activeSession });
+
 app.get('/', (req, res) => {
   res.status(200).json({
     project_name: 'Barangay Santa Monica Services with WebSockets',
@@ -31,7 +31,6 @@ app.get('/', (req, res) => {
 });
 
 app.set('io', io);
-
 io.on('connection', (socket) => {
   activeSession++;
   console.log(`✅ Socket connected: ${socket.id} | Active: ${activeSession}`);
@@ -45,9 +44,19 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', (reason) => {
     activeSession = Math.max(0, activeSession - 1);
-    console.log(`❌ Socket disconnected: ${socket.id} (${reason}) | Active: ${activeSession}`);
+    console.log(`❌ Disconnected: ${socket.id} (${reason}) | Active: ${activeSession}`);
     broadcastSessionCount();
   });
 });
 
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  if (process.env.RAILWAY_ENVIRONMENT_NAME) {
+    console.log('🤖 Starting internal Socket.IO client for live monitoring...');
+    try {
+      require('./socket_client');
+    } catch (err) {
+      console.error('⚠️ Failed to start internal client:', err.message);
+    }
+  }
+});
