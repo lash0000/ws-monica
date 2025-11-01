@@ -3,16 +3,16 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
-const cron = require('node-cron');
 const { Op } = require('sequelize');
 const routesV1 = require('./src/utils/routes_v1.utils');
 const UserSessions = require('./src/modules/user_sessions/user_sessions.mdl');
+const { broadcastSessionUpdate } = require('./src/utils/realtime.utils');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.set('view engine', 'ejs');
-app.set('views', './views'); // use ./views folder
+app.set('views', './views');
 app.use('/api/v1/data', routesV1);
 
 const server = http.createServer(app);
@@ -21,9 +21,9 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 8080;
-
 let dbSessionCount = 0;
 
+// Base sync once on startup
 async function updateDBSessionCount() {
   try {
     const rows = await UserSessions.findAll({
@@ -34,24 +34,25 @@ async function updateDBSessionCount() {
     });
     dbSessionCount = Array.isArray(rows) ? rows.length : 0;
     console.log('Synced user_session count (active only):', dbSessionCount);
+    broadcastSessionUpdate(io, dbSessionCount);
   } catch (err) {
     console.error('Failed to query user_sessions table:', err.message);
   }
 }
+
 updateDBSessionCount();
 
-cron.schedule('*/5 * * * *', async () => {
-  console.log('Running scheduled task: refresh user_sessions count');
-  await updateDBSessionCount();
-  io.emit('server:heartbeat', {
-    timestamp: new Date().toISOString(),
-    activeDBSessions: dbSessionCount,
-  });
+// Middleware for attaching io to requests (used by API handlers)
+app.use((req, res, next) => {
+  req.io = io;
+  next();
 });
+
+// Root route renders live dashboard
 app.get('/', (req, res) => {
   res.render('dashboard', {
     project_name: 'Barangay Santa Monica Services with WebSockets',
-    message: 'Socket.IO server is running and then watch it every 5 minutes.',
+    message: 'Socket.IO server is running and ready for connections.',
     version: '1.0.0',
     available_routes: ['/api/v1/data/...'],
   });
@@ -70,6 +71,23 @@ io.on('connection', (socket) => {
   socket.on('disconnect', (reason) => {
     console.log(`Socket disconnected: ${socket.id} (${reason})`);
   });
+});
+
+// Event hooks for user_sessions table (realtime updates)
+UserSessions.addHook('afterCreate', async () => {
+  const count = await UserSessions.count({
+    where: { logout_date: null, logout_info: null },
+  });
+  dbSessionCount = count;
+  broadcastSessionUpdate(io, dbSessionCount);
+});
+
+UserSessions.addHook('afterUpdate', async () => {
+  const count = await UserSessions.count({
+    where: { logout_date: null, logout_info: null },
+  });
+  dbSessionCount = count;
+  broadcastSessionUpdate(io, dbSessionCount);
 });
 
 server.listen(PORT, () => {

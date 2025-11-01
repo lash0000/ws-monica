@@ -1,10 +1,13 @@
 const userCredsService = require('./user_creds.srv');
+const UserSessions = require('../user_sessions/user_sessions.mdl');
+const { broadcastSessionUpdate } = require('../../utils/realtime.utils');
+const { Op } = require('sequelize');
 
 class UserCredsController {
   /**
-  * POST /api/v1/user-creds/verify
-  * Verifies session validity using session_id
-  */
+   * POST /api/v1/user-creds/verify
+   * Verifies session validity using session_id
+   */
   async verify(req, res) {
     try {
       const { sessionId } = req.body;
@@ -31,6 +34,93 @@ class UserCredsController {
     } catch (error) {
       return res.status(401).json({
         message: error.message || 'Session verification failed',
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/user-creds/logout
+   * Ends a user session and broadcasts real-time update
+   */
+  async logout(req, res) {
+    try {
+      const { session_id } = req.body;
+      if (!session_id) {
+        return res.status(400).json({ message: 'Missing session_id in request body' });
+      }
+
+      // Mark session as logged out
+      await UserSessions.update(
+        {
+          logout_date: new Date(),
+          logout_info: 'User logged out',
+        },
+        { where: { session_id } }
+      );
+
+      // Get fresh active session count
+      const activeCount = await UserSessions.count({
+        where: {
+          logout_date: { [Op.is]: null },
+          logout_info: { [Op.is]: null },
+        },
+      });
+
+      // Broadcast to all connected Socket.IO clients
+      const io = req.app.get('io');
+      if (io) {
+        broadcastSessionUpdate(io, activeCount);
+      }
+
+      return res.status(200).json({
+        message: 'Logout successful. Session ended.',
+        active_sessions: activeCount,
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      return res.status(500).json({
+        message: 'Logout failed.',
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/user-creds/login
+   * Optional: triggers real-time broadcast on new login
+   */
+  async login(req, res) {
+    try {
+      const { user_id } = req.body;
+      if (!user_id) {
+        return res.status(400).json({ message: 'Missing user_id in request body' });
+      }
+
+      await UserSessions.create({
+        user_id,
+        login_date: new Date(),
+      });
+
+      const activeCount = await UserSessions.count({
+        where: {
+          logout_date: { [Op.is]: null },
+          logout_info: { [Op.is]: null },
+        },
+      });
+
+      const io = req.app.get('io');
+      if (io) {
+        broadcastSessionUpdate(io, activeCount);
+      }
+
+      return res.status(200).json({
+        message: 'Login successful. Session created.',
+        active_sessions: activeCount,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: 'Login failed.',
+        error: error.message,
       });
     }
   }

@@ -30,7 +30,6 @@
     "express": "^5.1.0",
     "geoip-lite": "^1.4.10",
     "jsonwebtoken": "^9.0.2",
-    "node-cron": "^4.2.1",
     "nodemailer": "^7.0.9",
     "openai": "^6.6.0",
     "pg": "^8.16.3",
