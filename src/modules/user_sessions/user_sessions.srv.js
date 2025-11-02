@@ -1,44 +1,55 @@
-const jwt = require('jsonwebtoken');
-const UserSessionsModel = require('./user_sessions.mdl');
+const { Op } = require('sequelize');
+const UserSessions = require('./user_sessions.mdl');
 
 class UserSessionsService {
-  constructor() {
-    this.sessionModel = UserSessionsModel;
-    this.f_findBySessionId = this.f_findBySessionId.bind(this);
-    this.f_verifyRefreshToken = this.f_verifyRefreshToken.bind(this);
+  constructor(io) {
+    this.io = io;
   }
 
-  /**
-   * Finds a session by its session_id.
-   * Throws if not found or logged out.
-   */
-  async f_findBySessionId(sessionId) {
-    try {
-      const session = await this.sessionModel.findOne({
-        where: { session_id: String(sessionId) },
-      });
+  async createSession(user_id, extra = {}) {
+    if (!user_id) throw new Error('Missing user_id');
 
-      if (!session) throw new Error('Session not found');
-      if (session.logout_date !== null) throw new Error('Session ended — user logged out');
-
-      return session;
-    } catch (err) {
-      throw new Error(`Failed to find session: ${err.message}`);
-    }
+    return await UserSessions.create({
+      user_id,
+      login_date: new Date(),
+      logout_date: null,
+      logout_info: null,
+      login_info: extra.login_info || null,
+    });
   }
 
-  /**
-   * Verify a JWT refresh token (optional, can be used later)
-   */
-  f_verifyRefreshToken(token) {
-    try {
-      return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-    } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        throw new Error('Refresh token has expired');
-      }
-      throw new Error('Invalid refresh token');
-    }
+  async closeSessionByUserId(user_id, extra = {}) {
+    const session = await UserSessions.findOne({
+      where: { user_id, logout_date: { [Op.is]: null } },
+      order: [['login_date', 'DESC']],
+    });
+    if (!session) throw new Error('No active session found for user_id');
+
+    session.logout_date = new Date();
+    session.logout_info = extra.logout_info || null;
+    await session.save();
+
+    return session;
+  }
+
+  async closeSessionBySessionId(session_id, extra = {}) {
+    const session = await UserSessions.findOne({
+      where: { session_id: String(session_id), logout_date: { [Op.is]: null } },
+      order: [['login_date', 'DESC']],
+    });
+    if (!session) throw new Error('No active session found for sessionId');
+
+    session.logout_date = new Date();
+    session.logout_info = extra.logout_info || null;
+    await session.save();
+
+    return session;
+  }
+
+  async countActiveSessions() {
+    return await UserSessions.count({
+      where: { logout_date: null, logout_info: null },
+    });
   }
 }
 
