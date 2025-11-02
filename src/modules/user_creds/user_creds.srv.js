@@ -32,20 +32,24 @@ class UserCredsService extends UserSessionsService {
     };
   }
 
+  // ✅ LOGIN with safe transaction and post-commit events
   async login(req) {
     const { email, password } = req.body;
     const t = await sequelize.transaction();
 
     try {
+      // 1. Verify user exists
       const user = await UserCredentials.findOne({
         where: { email, is_active: true },
         transaction: t,
       });
       if (!user) throw new Error('User not found or inactive');
 
+      // 2. Validate password
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) throw new Error('Invalid credentials');
 
+      // 3. Check if already logged in
       const existingActiveSession = await UserSessions.findOne({
         where: {
           user_id: user.user_id,
@@ -54,11 +58,11 @@ class UserCredsService extends UserSessionsService {
         },
         transaction: t,
       });
-
       if (existingActiveSession) {
         throw new Error('User is already logged in on another session.');
       }
 
+      // 4. Create new session
       const clientInfo = this._extractClientInfo(req);
       const session = await UserSessions.create(
         {
@@ -69,12 +73,17 @@ class UserCredsService extends UserSessionsService {
         { transaction: t }
       );
 
+      // 5. Commit transaction before any emit or extra queries
       await t.commit();
-      await this._updateSessionCount();
-      this.io.emit('server:login_event', {
-        user_id: user.user_id,
-        session_id: session.session_id,
-        login_info: clientInfo,
+
+      // 6. Broadcast asynchronously (after commit)
+      setImmediate(async () => {
+        await this._updateSessionCount();
+        this.io.emit('server:login_event', {
+          user_id: user.user_id,
+          session_id: session.session_id,
+          login_info: clientInfo,
+        });
       });
 
       return { user_id: user.user_id, session_id: session.session_id };
@@ -84,6 +93,7 @@ class UserCredsService extends UserSessionsService {
     }
   }
 
+  // ✅ LOGOUT with safe transaction and post-commit events
   async logout(req) {
     const { user_id, sessionId } = req.body;
     if (!user_id && !sessionId) throw new Error('Missing user_id or sessionId');
@@ -107,10 +117,13 @@ class UserCredsService extends UserSessionsService {
 
       await t.commit();
 
-      await this._updateSessionCount();
-      this.io.emit('server:logout_event', {
-        ...(user_id ? { user_id } : { session_id: sessionId }),
-        logout_info: clientInfo,
+      //  Broadcast after successful commit
+      setImmediate(async () => {
+        await this._updateSessionCount();
+        this.io.emit('server:logout_event', {
+          ...(user_id ? { user_id } : { session_id: sessionId }),
+          logout_info: clientInfo,
+        });
       });
 
       return updated;
@@ -120,6 +133,7 @@ class UserCredsService extends UserSessionsService {
     }
   }
 
+  // ✅ Keeps session count synced across sockets
   async _updateSessionCount() {
     const activeCount = await this.countActiveSessions();
     broadcastSessionUpdate(this.io, activeCount);

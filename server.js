@@ -67,22 +67,6 @@ io.on('connection', (socket) => {
   });
 });
 
-UserSessions.addHook('afterCreate', async () => {
-  const count = await UserSessions.count({
-    where: { logout_date: null, logout_info: null },
-  });
-  dbSessionCount = count;
-  broadcastSessionUpdate(io, dbSessionCount);
-});
-
-UserSessions.addHook('afterUpdate', async () => {
-  const count = await UserSessions.count({
-    where: { logout_date: null, logout_info: null },
-  });
-  dbSessionCount = count;
-  broadcastSessionUpdate(io, dbSessionCount);
-});
-
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
