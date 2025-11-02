@@ -23,7 +23,6 @@
           project_name: '<%= project_name %>',
           message: '<%= message %>',
           version: '<%= version %>',
-          available_routes: <%- JSON.stringify(available_routes) %>,
           user_sessions_length: count
         };
         output.textContent = JSON.stringify(json, null, 2);
