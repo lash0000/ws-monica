@@ -54,18 +54,29 @@ app.get('/', (req, res) => {
   });
 });
 
-io.on('connection', (socket) => {
+
+io.on('connection', async (socket) => {
   console.log(`Socket connected: ${socket.id}`);
-  socket.emit('server:session_count', { activeDBSessions: dbSessionCount });
+  try {
+    const count = await UserSessions.count({
+      where: { logout_date: null, logout_info: null },
+    });
+    socket.emit('server:heartbeat', {
+      timestamp: new Date().toISOString(),
+      activeDBSessions: count,
+    });
+  } catch (err) {
+    console.error('Error sending initial heartbeat:', err.message);
+  }
 
   socket.on('client:ping', (data, callback) => {
-    callback({ pong: true, activeDBSessions: dbSessionCount });
+    callback({ pong: true });
   });
-
   socket.on('disconnect', (reason) => {
     console.log(`Socket disconnected: ${socket.id} (${reason})`);
   });
 });
+
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
