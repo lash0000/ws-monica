@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const userCredsService = require('../modules/user_creds/user_creds.srv');
 
 const f_authMiddleware = async (req, res, next) => {
   try {
@@ -13,19 +12,10 @@ const f_authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: 'Bearer token malformed' });
     }
 
-    const decodedAccess = jwt.verify(token, process.env.JWT_SECRET);
+    const decodedAccess = jwt.verify(token, process.env.JWT_ACCESS);
     req.user = decodedAccess;
-    const refreshToken = req.headers['x-refresh-token'];
-    if (!refreshToken) {
-      return res.status(401).json({ message: 'Missing refresh token' });
-    }
-    const { session, decoded } = await userCredsService.f_validateSession(refreshToken);
-    req.session = session;
-    req.refreshUser = decoded;
 
-    // Continue to protected route
     next();
-
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ message: 'Access token has expired' });

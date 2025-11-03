@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const geoip = require('geoip-lite');
 const useragent = require('useragent');
+const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const sequelize = require('../../../config/db.config');
 const UserCredentials = require('./user_creds.mdl');
@@ -32,7 +33,7 @@ class UserCredsService extends UserSessionsService {
     };
   }
 
-  async login(req) {
+  async login(req, res) {
     const { email, password } = req.body;
     const t = await sequelize.transaction();
 
@@ -45,6 +46,7 @@ class UserCredsService extends UserSessionsService {
 
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) throw new Error('Invalid credentials');
+
       const existingActiveSession = await UserSessions.findOne({
         where: {
           user_id: user.user_id,
@@ -68,6 +70,53 @@ class UserCredsService extends UserSessionsService {
       );
 
       await t.commit();
+
+      const accessToken = jwt.sign(
+        {
+          user_id: user.user_id,
+          email: user.email,
+          acc_type: user.acc_type,
+          session_id: session.session_id,
+        },
+        process.env.JWT_ACCESS,
+        { expiresIn: '15m' }
+      );
+
+      const refreshToken = jwt.sign(
+        {
+          user_id: user.user_id,
+          session_id: session.session_id,
+        },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: '15d' }
+      );
+
+      /*
+       * setup starters 
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+      * offline side (httpOnly) 
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: false,
+        secure: false,
+        sameSite: 'Lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+       *
+       */
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+
       setImmediate(async () => {
         const activeCount = await this.countActiveSessions();
         broadcastSessionUpdate(this.io, activeCount);
@@ -78,8 +127,7 @@ class UserCredsService extends UserSessionsService {
         });
       });
 
-
-      return { user_id: user.user_id, session_id: session.session_id };
+      return { user_id: user.user_id, session_id: session.session_id, access_token: accessToken };
     } catch (err) {
       await t.rollback();
       throw err;
@@ -100,7 +148,7 @@ class UserCredsService extends UserSessionsService {
           logout_info: clientInfo,
           transaction: t,
         });
-      } else if (sessionId) {
+      } else {
         updated = await this.closeSessionBySessionId(sessionId, {
           logout_info: clientInfo,
           transaction: t,
@@ -108,6 +156,30 @@ class UserCredsService extends UserSessionsService {
       }
 
       await t.commit();
+
+      /*
+       * setup starters 
+      req.res.clearCookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+       * offline setup 
+      req.res.clearCookie('refreshToken', {
+        httpOnly: false,
+        secure: false,
+        sameSite: 'Lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+       */
+
+      req.res.clearCookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
 
       setImmediate(async () => {
         const activeCount = await this.countActiveSessions();
@@ -122,6 +194,64 @@ class UserCredsService extends UserSessionsService {
     } catch (err) {
       await t.rollback();
       throw err;
+    }
+  }
+
+  async refresh(req, res) {
+    const token = req.cookies.refreshToken;
+    if (!token) throw new Error('Missing refresh token');
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+      const user = await UserCredentials.findByPk(decoded.user_id);
+      if (!user) throw new Error('User not found');
+
+      const newAccessToken = jwt.sign(
+        {
+          user_id: user.user_id,
+          email: user.email,
+          acc_type: user.acc_type,
+          session_id: decoded.session_id,
+        },
+        process.env.JWT_ACCESS,
+        { expiresIn: '15m' }
+      );
+
+      return { access_token: newAccessToken };
+    } catch (error) {
+      throw new Error('Invalid or expired refresh token');
+    }
+  }
+
+  // For accessing the protected routes
+  async validateSession(refreshToken) {
+    if (!refreshToken) {
+      throw new Error('Missing refresh token');
+    }
+
+    try {
+      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+      const user = await UserCredentials.findByPk(decoded.user_id);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const session = await UserSessions.findOne({
+        where: {
+          session_id: decoded.session_id,
+          user_id: decoded.user_id,
+          logout_date: { [Op.is]: null },
+          logout_info: { [Op.is]: null },
+        },
+      });
+
+      if (!session) {
+        throw new Error('Session is invalid or expired');
+      }
+
+      return { session, decoded };
+    } catch (err) {
+      throw new Error('Invalid or expired refresh token');
     }
   }
 

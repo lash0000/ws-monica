@@ -5,7 +5,9 @@ const cors = require('cors');
 const { Server } = require('socket.io');
 const { Op } = require('sequelize');
 const UserSessions = require('./src/modules/user_sessions/user_sessions.mdl');
+const mdl_Files = require('./src/modules/files/files.mdl');
 const { broadcastSessionUpdate } = require('./src/utils/realtime.utils');
+const { BlobServiceClient } = require('@azure/storage-blob');
 
 const app = express();
 app.use(cors());
@@ -28,6 +30,8 @@ let dbSessionCount = 0;
 const routesV1 = require('./src/utils/routes_v1.utils')(io);
 app.use('/api/v1/data', routesV1);
 
+
+// existing function
 async function updateDBSessionCount() {
   try {
     const rows = await UserSessions.findAll({
@@ -37,12 +41,21 @@ async function updateDBSessionCount() {
       },
     });
     dbSessionCount = Array.isArray(rows) ? rows.length : 0;
-    console.log('Synced user_session count (active only):', dbSessionCount);
+
+    const fileCount = await mdl_Files.count();
+    console.log(`Synced user_session count: ${dbSessionCount}, file count: ${fileCount}`);
+    io.emit('server:heartbeat', {
+      timestamp: new Date().toISOString(),
+      activeDBSessions: dbSessionCount,
+      totalFiles: fileCount,
+    });
+
     broadcastSessionUpdate(io, dbSessionCount);
   } catch (err) {
-    console.error('Failed to query user_sessions table:', err.message);
+    console.error('Failed to query tables:', err.message);
   }
 }
+
 updateDBSessionCount();
 
 app.use((req, res, next) => {
@@ -58,16 +71,17 @@ app.get('/', (req, res) => {
   });
 });
 
-
 io.on('connection', async (socket) => {
   console.log(`Socket connected: ${socket.id}`);
   try {
-    const count = await UserSessions.count({
+    const activeSessions = await UserSessions.count({
       where: { logout_date: null, logout_info: null },
     });
+    const fileCount = await mdl_Files.count();
     socket.emit('server:heartbeat', {
       timestamp: new Date().toISOString(),
-      activeDBSessions: count,
+      activeDBSessions: activeSessions,
+      totalFiles: fileCount,
     });
   } catch (err) {
     console.error('Error sending initial heartbeat:', err.message);
@@ -81,6 +95,29 @@ io.on('connection', async (socket) => {
   });
 });
 
+
+// Azure Blob Storage 
+async function verifyAzureBlobConnection() {
+  try {
+    const blobServiceClient = BlobServiceClient.fromConnectionString(
+      process.env.AZURE_STORAGE_CONNECTION_STRING
+    );
+    const containerName = process.env.AZURE_BLOB_CONTAINER || 'uploads';
+    const containerClient = blobServiceClient.getContainerClient(containerName);
+    const exists = await containerClient.exists();
+
+    if (exists) {
+      console.log(`Azure Blob Storage connected (container: ${containerName})`);
+    } else {
+      console.warn(`Container "${containerName}" does not exist — attempting to create...`);
+      await containerClient.create();
+      console.log(`Azure Blob Storage container "${containerName}" created successfully.`);
+    }
+  } catch (err) {
+    console.error('Azure Blob Storage connection failed:', err.message);
+  }
+}
+verifyAzureBlobConnection();
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

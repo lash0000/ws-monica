@@ -18,14 +18,15 @@
       const socket = io('/', { transports: ['websocket'] });
       const output = document.getElementById('output');
 
-      function render(count) {
+      function render(sessionCount, fileCount) {
         const json = {
           project_name: '<%= project_name %>',
           message: '<%= message %>',
           version: '<%= version %>',
-          user_sessions_length: count
+          user_sessions_length: sessionCount,
+          total_files_uploaded: fileCount
         };
-        output.textContent = JSON.stringify(json, null, 2);
+      output.textContent = JSON.stringify(json, null, 2);
       }
 
       socket.on('connect', () => {
@@ -33,7 +34,7 @@
       });
 
       socket.on('server:heartbeat', (data) => {
-        render(data.activeDBSessions);
+        render(data.activeDBSessions, data.totalFiles);
       });
 
       socket.on('disconnect', () => {
@@ -44,5 +45,5 @@
         output.textContent = 'Connection error: ' + err.message;
       });
     </script>
-  </body>
+ </body>
 </html>
