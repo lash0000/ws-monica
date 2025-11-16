@@ -95,6 +95,17 @@ module.exports = (io) => {
     async getAllFiles() {
       return await mdl_Files.findAll({ order: [['createdAt', 'DESC']] });
     }
+
+
+    async uploadBuffer(blobName, mimeType, buffer) {
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+      await blockBlobClient.uploadData(buffer, {
+        blobHTTPHeaders: { blobContentType: mimeType }
+      });
+
+      return { url: blockBlobClient.url };
+    }
   }
 
   return new FileUploadService();
