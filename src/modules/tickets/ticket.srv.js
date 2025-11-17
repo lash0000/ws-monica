@@ -15,17 +15,16 @@ module.exports = (io) => {
         const busboy = Busboy({ headers: req.headers });
 
         const fields = {};
-        const uploadedFileIds = [];
+        const uploadedFiles = [];
+
         const ticket_id = uuidv4();
         fields.id = ticket_id;
 
-        // Collect all ticket fields from multipart
         busboy.on("field", (key, value) => {
           fields[key] = value;
         });
 
-        // Handle file uploads
-        busboy.on("file", async (fieldname, file, filename, encoding, mimetype) => {
+        busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
           if (!filename) return;
 
           const original = typeof filename === "string" ? filename : filename?.filename;
@@ -39,37 +38,48 @@ module.exports = (io) => {
             const ext = blobName.split(".").pop().toLowerCase();
             const safeMime = mime.lookup(ext) || mimetype || "application/octet-stream";
 
-            // Upload to Azure Blob
             const uploaded = await FileUploadService.uploadBuffer(blobName, safeMime, buffer);
 
-            // Insert file row with ticket_id ALREADY known
-            const saved = await mdl_Files.create({
+            uploadedFiles.push({
               filename: blobName,
               file_type: ext,
               mime_type: safeMime,
               file_url: uploaded.url,
-              size: buffer.length,
-              uploaded_by: fields.user_id,
-              ticket_id: ticket_id
+              size: buffer.length
             });
-
-            uploadedFileIds.push(saved.id);
           });
         });
 
-        // When all fields/files have been processed
         busboy.on("finish", async () => {
+          const transaction = await mdl_Tickets.sequelize.transaction();
+
           try {
-            // Create ticket WITH the pre-generated ID
-            const ticket = await mdl_Tickets.create(fields);
+            // Insert ticket
+            const ticket = await mdl_Tickets.create(fields, { transaction });
+
+            // Insert file rows
+            for (const fileItem of uploadedFiles) {
+              await mdl_Files.create(
+                {
+                  ...fileItem,
+                  uploaded_by: fields.user_id,
+                  ticket_id
+                },
+                { transaction }
+              );
+            }
+
+            await transaction.commit();
 
             io.emit("tickets:new", ticket);
 
             resolve({
               ticket,
-              attachments: uploadedFileIds
+              attachments: uploadedFiles.map((f) => f.filename)
             });
+
           } catch (err) {
+            await transaction.rollback();
             reject(err);
           }
         });
@@ -77,6 +87,7 @@ module.exports = (io) => {
         req.pipe(busboy);
       });
     }
+
 
     async getAllTickets() {
       return mdl_Tickets.findAll({
@@ -103,15 +114,13 @@ module.exports = (io) => {
         const busboy = Busboy({ headers: req.headers });
 
         const fields = {};
-        const newFileIds = [];
+        const newFiles = [];
 
-        // Collect field updates
         busboy.on("field", (key, value) => {
           fields[key] = value;
         });
 
-        // Handle optional new file uploads
-        busboy.on("file", async (fieldname, file, filename, encoding, mimetype) => {
+        busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
           if (!filename) return;
 
           const original = typeof filename === "string" ? filename : filename?.filename;
@@ -123,47 +132,56 @@ module.exports = (io) => {
           file.on("end", async () => {
             const buffer = Buffer.concat(chunks);
             const ext = blobName.split(".").pop().toLowerCase();
-            const safeMime = mime.lookup(ext) || mimetype || "application/octet-stream";
+            const safeMime = mime.lookup(ext) || "application/octet-stream";
 
-            // Upload blob
             const uploaded = await FileUploadService.uploadBuffer(blobName, safeMime, buffer);
 
-            // Save as NEW attachment
-            const savedFile = await mdl_Files.create({
+            newFiles.push({
               filename: blobName,
               file_type: ext,
               mime_type: safeMime,
               file_url: uploaded.url,
-              size: buffer.length,
-              ticket_id: ticketId,
-              uploaded_by: fields.user_id
+              size: buffer.length
             });
-
-            newFileIds.push(savedFile.id);
           });
         });
 
         busboy.on("finish", async () => {
+          const t = await mdl_Tickets.sequelize.transaction();
+
           try {
-            // Look up ticket
-            const ticket = await mdl_Tickets.findByPk(ticketId);
+            const ticket = await mdl_Tickets.findByPk(ticketId, { transaction: t });
+
             if (!ticket) throw new Error("Ticket not found");
 
-            // Update fields (only provided keys)
-            await ticket.update(fields);
+            await ticket.update(fields, { transaction: t });
 
-            // Emit event for UI updating
+            for (const fileItem of newFiles) {
+              await mdl_Files.create(
+                {
+                  ...fileItem,
+                  uploaded_by: fields.user_id,
+                  ticket_id: ticketId
+                },
+                { transaction: t }
+              );
+            }
+
+            await t.commit();
+
             io.emit("tickets:update", {
               ticket_id: ticketId,
               updates: fields,
-              new_attachments: newFileIds
+              new_attachments: newFiles.map((f) => f.filename)
             });
 
             resolve({
               ticket,
-              new_attachments: newFileIds
+              new_attachments: newFiles
             });
+
           } catch (err) {
+            await t.rollback();
             reject(err);
           }
         });

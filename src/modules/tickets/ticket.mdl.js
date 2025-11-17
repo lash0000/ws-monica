@@ -53,6 +53,5 @@ const mdl_Tickets = db_sequelize.define('Tickets', {
 );
 
 mdl_Tickets.belongsTo(mdl_UserCredentials, { foreignKey: 'user_id' });
-mdl_UserCredentials.hasMany(mdl_Tickets, { foreignKey: 'user_id' });
 
 module.exports = mdl_Tickets;

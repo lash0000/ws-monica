@@ -104,7 +104,7 @@ class UserCredsService extends UserSessionsService {
         httpOnly: false,
         secure: false,
         sameSite: 'Lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 15 * 24 * 60 * 60 * 1000
       });
        *
        */
@@ -113,7 +113,7 @@ class UserCredsService extends UserSessionsService {
         httpOnly: false,
         secure: false,
         sameSite: 'Lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 15 * 24 * 60 * 60 * 1000
       });
 
 
@@ -170,7 +170,7 @@ class UserCredsService extends UserSessionsService {
         httpOnly: false,
         secure: false,
         sameSite: 'Lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 15 * 24 * 60 * 60 * 1000,
       });
        */
 
@@ -178,7 +178,7 @@ class UserCredsService extends UserSessionsService {
         httpOnly: false,
         secure: false,
         sameSite: 'Lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 15 * 24 * 60 * 60 * 1000,
       });
 
       setImmediate(async () => {
