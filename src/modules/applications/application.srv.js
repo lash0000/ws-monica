@@ -1,3 +1,5 @@
+// TODO: Adddata and updateData with EmailService
+
 const sequelize = require('../../../config/db.config');
 const mdl_Applications = require('./application.mdl');
 const mdl_UserProfile = require('../user_profile/user_profile.mdl');
