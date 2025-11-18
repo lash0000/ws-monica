@@ -19,8 +19,9 @@ class ApplicationService {
         transaction: t
       });
 
-      if (!profile)
-        throw new Error('UserProfile does not exist for this user');
+      if (!profile) {
+        throw new Error("User profile does not exist. Complete profile first.");
+      }
 
       const app = await mdl_Applications.create(payload, { transaction: t });
 
@@ -63,12 +64,22 @@ class ApplicationService {
       include: [
         {
           model: mdl_UserCredentials,
+          as: 'ApplicationCreator',
           include: [
             {
               model: mdl_UserProfile
             }
           ]
         },
+        {
+          model: mdl_UserCredentials,
+          as: 'ApplicationAction',
+          include: [
+            {
+              model: mdl_UserProfile
+            }
+          ]
+        }
       ]
     });
   }
@@ -78,12 +89,22 @@ class ApplicationService {
       include: [
         {
           model: mdl_UserCredentials,
+          as: 'ApplicationCreator',
           include: [
             {
               model: mdl_UserProfile
             }
           ]
         },
+        {
+          model: mdl_UserCredentials,
+          as: 'ApplicationAction',
+          include: [
+            {
+              model: mdl_UserProfile
+            }
+          ]
+        }
       ]
     });
   }
@@ -93,12 +114,22 @@ class ApplicationService {
       include: [
         {
           model: mdl_UserCredentials,
+          as: 'ApplicationCreator',
           include: [
             {
               model: mdl_UserProfile
             }
           ]
         },
+        {
+          model: mdl_UserCredentials,
+          as: 'ApplicationAction',
+          include: [
+            {
+              model: mdl_UserProfile
+            }
+          ]
+        }
       ]
     });
   }

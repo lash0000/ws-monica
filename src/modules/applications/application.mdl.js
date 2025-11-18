@@ -45,7 +45,7 @@ const mdl_Applications = db_sequelize.define('Applications', {
 
 // belongsTo (One to one)
 // hasMany (One to many)
-mdl_Applications.belongsTo(mdl_UserCredentials, { foreignKey: 'action_by' })
-mdl_Applications.belongsTo(mdl_UserCredentials, { foreignKey: 'application_by' })
+mdl_Applications.belongsTo(mdl_UserCredentials, { foreignKey: 'action_by', as: 'ApplicationAction' })
+mdl_Applications.belongsTo(mdl_UserCredentials, { foreignKey: 'application_by', as: 'ApplicationCreator' })
 
 module.exports = mdl_Applications;

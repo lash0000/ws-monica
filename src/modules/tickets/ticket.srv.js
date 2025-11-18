@@ -7,6 +7,7 @@ const UserCredentials = require("../user_creds/user_creds.mdl");
 const { v4: uuidv4 } = require("uuid");
 const Busboy = require("busboy");
 const mime = require("mime-types");
+const mdl_UserProfile = require('../user_profile/user_profile.mdl');
 
 module.exports = (io) => {
   const FileUploadService = FileUploadServiceFactory(io);
@@ -56,10 +57,19 @@ module.exports = (io) => {
           const transaction = await mdl_Tickets.sequelize.transaction();
 
           try {
-            // Insert ticket
-            const ticket = await mdl_Tickets.create(fields, { transaction });
+            const userProfile = await mdl_UserProfile.findOne({
+              where: { user_id: fields.user_id },
+              transaction
+            });
 
-            // Insert file rows
+            if (!userProfile) {
+              await transaction.rollback();
+              return reject({
+                message: "User profile does not exist. Complete profile first."
+              });
+            }
+
+            const ticket = await mdl_Tickets.create(fields, { transaction });
             for (const fileItem of uploadedFiles) {
               await mdl_Files.create(
                 {
@@ -74,7 +84,6 @@ module.exports = (io) => {
             await transaction.commit();
 
             io.emit("tickets:new", ticket);
-
             resolve({
               ticket,
               attachments: uploadedFiles.map((f) => f.filename)
@@ -89,7 +98,6 @@ module.exports = (io) => {
         req.pipe(busboy);
       });
     }
-
 
     async getAllTickets() {
       return mdl_Tickets.findAll({

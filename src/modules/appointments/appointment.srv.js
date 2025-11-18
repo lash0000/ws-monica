@@ -1,3 +1,5 @@
+// TODO: Adddata and updateData with EmailService
+
 const mdl_Appointments = require('./appointment.mdl');
 const mdl_UserCredentials = require('../user_creds/user_creds.mdl');
 const mdl_UserProfile = require('../user_profile/user_profile.mdl')
@@ -19,7 +21,7 @@ class AppointmentService {
       });
 
       if (!profile) {
-        throw new Error('UserProfile does not exist for this user');
+        throw new Error("User profile does not exist. Complete profile first.");
       }
 
       // Create appointment
