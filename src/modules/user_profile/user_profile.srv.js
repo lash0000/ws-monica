@@ -44,20 +44,19 @@ class UserProfileService {
   }
 
   async getProfile() {
-    return mdl_UserProfile.findAll({
-      include: [
-        { model: UserCredentials, attributes: ['email', 'acc_type', 'is_active'] }
-      ]
-    });
+    return mdl_UserProfile.findAll();
   }
 
   async getProfileByID(id) {
-    return mdl_UserProfile.findByPk(id, {
-      include: [
-        { model: UserCredentials, attributes: ['email', 'acc_type', 'is_active'] }
-      ]
+    return mdl_UserProfile.findByPk(id);
+  }
+
+  async myProfile(user_id) {
+    return mdl_UserProfile.findOne({
+      where: { user_id },
     });
   }
+
 }
 
 module.exports = UserProfileService;

@@ -15,6 +15,9 @@ module.exports = (io) => {
   router.get("/:id", f_authMiddleware, (req, res) =>
     controller.getProfileByID(req, res)
   );
+  router.get('/user/:id', f_authMiddleware, (req, res) =>
+    controller.myProfile(req, res)
+  );
   router.patch("/:id", f_authMiddleware, (req, res) =>
     controller.updateProfile(req, res)
   );

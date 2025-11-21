@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../../config/db.config');
+const mdl_UserCredentials = require('../user_creds/user_creds.mdl');
 
 const mdl_UserProfile = sequelize.define('UserProfile', {
   id: {

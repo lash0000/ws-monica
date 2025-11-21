@@ -99,7 +99,7 @@ class UserCredsService extends UserSessionsService {
         sameSite: 'None',
         partitioned: true,
         path: '/',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 15 * 24 * 60 * 60 * 1000
       });
       * offline side (httpOnly) 
       res.cookie('refreshToken', refreshToken, {
@@ -117,7 +117,7 @@ class UserCredsService extends UserSessionsService {
         sameSite: 'None',
         partitioned: true,
         path: '/',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 15 * 24 * 60 * 60 * 1000
       });
 
 
@@ -164,7 +164,7 @@ class UserCredsService extends UserSessionsService {
 
       /*
        * setup starters 
-      res.clearCookie("refreshToken", {
+      req.res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: true,
         partitioned: true,
@@ -179,8 +179,7 @@ class UserCredsService extends UserSessionsService {
         maxAge: 15 * 24 * 60 * 60 * 1000,
       });
        */
-
-      res.clearCookie("refreshToken", {
+      req.res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: true,
         partitioned: true,

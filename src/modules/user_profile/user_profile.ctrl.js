@@ -40,6 +40,18 @@ class UserProfileController {
       res.status(404).json({ success: false, error: err.message });
     }
   }
+
+  myProfile = async (req, res) => {
+    try {
+      const user_id = req.user.user_id;
+      const data = await this.service.myProfile(user_id);
+      if (!data) return res.status(404).json({ message: "Profile not found" });
+
+      return res.json(data);
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
 }
 
 module.exports = UserProfileController;
