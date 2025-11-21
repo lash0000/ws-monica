@@ -1,0 +1,12 @@
++-----------+
+| ws-monica |
++-----------+
+
+This socket.io project provides real-time communication functionality intended for Barangay Santa Monica and other service modules. It allows applications to send and receive live updates such as notifications,ticket progress, appointment status, and event announcements.
+
+Features:
+• Real-time bidirectional communication using Socket.IO
+• Express HTTP server integration
+• Cross-origin support for multiple client applications
+• Broadcasting and room-based message grouping
+• Designed for integration with web and mobile clients
