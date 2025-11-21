@@ -10,23 +10,28 @@ const { broadcastSessionUpdate } = require('./src/utils/realtime.utils');
 const { BlobServiceClient } = require('@azure/storage-blob');
 
 const app = express();
-app.use(cors());
+const unifiedCors = {
+  origin: [
+    "https://barangay-santa-monica.vercel.app",
+    "http://localhost:5173"
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"]
+};
+
+// EXPRESS USES THE SAME CORS
+app.use(cors(unifiedCors));
 app.use(express.json());
 app.set('view engine', 'ejs');
 app.set('views', './views');
 
 const server = http.createServer(app);
+
+// SOCKET.IO USES THE SAME CORS
 const io = new Server(server, {
-  cors: {
-    origin: [
-      "https://barangay-santa-monica.vercel.app",
-      "http://localhost:5173",
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-  },
-  transports: ["websocket"],
+  cors: unifiedCors,
+  transports: ["websocket"]
 });
 
 const PORT = process.env.PORT || 8080;
@@ -35,24 +40,23 @@ let dbSessionCount = 0;
 const routesV1 = require('./src/utils/routes_v1.utils')(io);
 app.use('/api/v1/data', routesV1);
 
-
-// existing function
 async function updateDBSessionCount() {
   try {
     const rows = await UserSessions.findAll({
       where: {
         logout_date: { [Op.is]: null },
-        logout_info: { [Op.is]: null },
-      },
+        logout_info: { [Op.is]: null }
+      }
     });
     dbSessionCount = Array.isArray(rows) ? rows.length : 0;
 
     const fileCount = await mdl_Files.count();
     console.log(`Synced user_session count: ${dbSessionCount}, file count: ${fileCount}`);
+
     io.emit('server:heartbeat', {
       timestamp: new Date().toISOString(),
       activeDBSessions: dbSessionCount,
-      totalFiles: fileCount,
+      totalFiles: fileCount
     });
 
     broadcastSessionUpdate(io, dbSessionCount);
@@ -72,21 +76,24 @@ app.get('/', (req, res) => {
   res.render('dashboard', {
     project_name: 'Barangay Santa Monica Services with WebSockets',
     message: 'Socket.IO server is running and ready for connections.',
-    version: '1.0.0',
+    version: '1.0.0'
   });
 });
 
 io.on('connection', async (socket) => {
   console.log(`Socket connected: ${socket.id}`);
+
   try {
     const activeSessions = await UserSessions.count({
-      where: { logout_date: null, logout_info: null },
+      where: { logout_date: null, logout_info: null }
     });
+
     const fileCount = await mdl_Files.count();
+
     socket.emit('server:heartbeat', {
       timestamp: new Date().toISOString(),
       activeDBSessions: activeSessions,
-      totalFiles: fileCount,
+      totalFiles: fileCount
     });
   } catch (err) {
     console.error('Error sending initial heartbeat:', err.message);
@@ -95,18 +102,18 @@ io.on('connection', async (socket) => {
   socket.on('client:ping', (data, callback) => {
     callback({ pong: true });
   });
+
   socket.on('disconnect', (reason) => {
     console.log(`Socket disconnected: ${socket.id} (${reason})`);
   });
 });
 
-
-// Azure Blob Storage 
 async function verifyAzureBlobConnection() {
   try {
     const blobServiceClient = BlobServiceClient.fromConnectionString(
       process.env.AZURE_STORAGE_CONNECTION_STRING
     );
+
     const containerName = process.env.AZURE_BLOB_CONTAINER || 'uploads';
     const containerClient = blobServiceClient.getContainerClient(containerName);
     const exists = await containerClient.exists();
