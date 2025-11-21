@@ -47,6 +47,14 @@ const mdl_UserProfile = sequelize.define('UserProfile', {
     type: DataTypes.JSONB,
     allowNull: true
   },
+  gender: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  nationality: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  }
 }, {
   tableName: 'user_profile',
   timestamps: true
