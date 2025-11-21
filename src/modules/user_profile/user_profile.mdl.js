@@ -54,6 +54,10 @@ const mdl_UserProfile = sequelize.define('UserProfile', {
   nationality: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  civil_status: {
+    type: DataTypes.TEXT,
+    allowNull: true
   }
 }, {
   tableName: 'user_profile',
