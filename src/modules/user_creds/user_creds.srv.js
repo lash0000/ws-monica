@@ -139,6 +139,7 @@ class UserCredsService extends UserSessionsService {
     if (!user_id && !sessionId) throw new Error('Missing user_id or sessionId');
 
     const t = await sequelize.transaction();
+
     try {
       const clientInfo = this._extractClientInfo(req);
       let updated;
@@ -192,7 +193,7 @@ class UserCredsService extends UserSessionsService {
 
       return updated;
     } catch (err) {
-      await t.rollback();
+      if (!t.finished) await t.rollback();
       throw err;
     }
   }
