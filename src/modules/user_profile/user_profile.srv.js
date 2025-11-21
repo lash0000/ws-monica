@@ -43,8 +43,15 @@ class UserProfileService {
     }
   }
 
+
   async getProfile() {
-    return mdl_UserProfile.findAll();
+    return UserCredentials.findAll({
+      include: [
+        {
+          model: mdl_UserProfile,
+        }
+      ]
+    });
   }
 
   async getProfileByID(id) {
@@ -52,8 +59,13 @@ class UserProfileService {
   }
 
   async myProfile(user_id) {
-    return mdl_UserProfile.findOne({
+    return UserCredentials.findOne({
       where: { user_id },
+      include: [
+        {
+          model: mdl_UserProfile
+        }
+      ]
     });
   }
 
