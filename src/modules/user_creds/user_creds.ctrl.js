@@ -33,6 +33,15 @@ class UserCredsController {
       this.handler.error(res, error.message || 'Token refresh failed', 403);
     }
   }
+
+  async validate(req, res) {
+    try {
+      const result = await this.service.validateSession(req, res);
+      this.handler.success(res, 'Validated session successfully', result);
+    } catch (error) {
+      this.handler.error(res, error.message || 'Validate session failed', 403);
+    }
+  }
 }
 
 module.exports = UserCredsController;

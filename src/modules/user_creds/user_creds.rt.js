@@ -10,6 +10,7 @@ module.exports = (io) => {
   router.post('/login', (req, res) => controller.login(req, res));
   router.post('/logout', (req, res) => controller.logout(req, res));
   router.post('/refresh', (req, res) => controller.refresh(req, res));
+  router.post('/validate', (req, res) => controller.validate(req, res));
 
   return router;
 };

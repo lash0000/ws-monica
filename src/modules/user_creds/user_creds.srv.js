@@ -110,10 +110,10 @@ class UserCredsService extends UserSessionsService {
        */
 
       res.cookie('refreshToken', refreshToken, {
-        httpOnly: false,
-        secure: false,
-        sameSite: 'Lax',
-        maxAge: 15 * 24 * 60 * 60 * 1000
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
 
@@ -174,11 +174,11 @@ class UserCredsService extends UserSessionsService {
       });
        */
 
-      req.res.clearCookie('refreshToken', {
-        httpOnly: false,
-        secure: false,
-        sameSite: 'Lax',
-        maxAge: 15 * 24 * 60 * 60 * 1000,
+      req.res.clearCookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
       setImmediate(async () => {
