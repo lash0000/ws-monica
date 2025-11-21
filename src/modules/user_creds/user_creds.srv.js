@@ -120,7 +120,6 @@ class UserCredsService extends UserSessionsService {
         maxAge: 15 * 24 * 60 * 60 * 1000
       });
 
-
       setImmediate(async () => {
         const activeCount = await this.countActiveSessions();
         broadcastSessionUpdate(this.io, activeCount);
