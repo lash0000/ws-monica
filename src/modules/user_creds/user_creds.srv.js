@@ -92,11 +92,12 @@ class UserCredsService extends UserSessionsService {
       );
 
       /*
-       * setup starters 
+       * setup starters (prod-ready)
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Strict',
+        secure: true,
+        sameSite: 'None',
+        path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
       * offline side (httpOnly) 
@@ -111,8 +112,9 @@ class UserCredsService extends UserSessionsService {
 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Strict',
+        secure: true,
+        sameSite: 'None',
+        path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
@@ -160,11 +162,11 @@ class UserCredsService extends UserSessionsService {
 
       /*
        * setup starters 
-      req.res.clearCookie('refreshToken', refreshToken, {
+      res.clearCookie("refreshToken", {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        secure: true,
+        sameSite: "none",
+        path: "/",
       });
        * offline setup 
       req.res.clearCookie('refreshToken', {
@@ -175,11 +177,11 @@ class UserCredsService extends UserSessionsService {
       });
        */
 
-      req.res.clearCookie('refreshToken', refreshToken, {
+      res.clearCookie("refreshToken", {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        secure: true,
+        sameSite: "none",
+        path: "/",
       });
 
       setImmediate(async () => {
