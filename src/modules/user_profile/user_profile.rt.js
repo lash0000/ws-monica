@@ -18,6 +18,9 @@ module.exports = (io) => {
   router.get('/user/:id', f_authMiddleware, (req, res) =>
     controller.myProfile(req, res)
   );
+  router.patch("/me", f_authMiddleware, (req, res) =>
+    controller.myUpdateProfile(req, res)
+  );
   router.patch("/:id", f_authMiddleware, (req, res) =>
     controller.updateProfile(req, res)
   );

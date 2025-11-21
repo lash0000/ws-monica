@@ -22,6 +22,9 @@ module.exports = (io) => {
   router.delete('/:id', f_authMiddleware, (req, res) =>
     controller.deleteTicket(req, res)
   );
+  router.get("/user/:id", f_authMiddleware, (req, res) =>
+    controller.myTickets(req, res)
+  );
 
   // Comments (requries id)
   router.post("/:id/comments", f_authMiddleware, (req, res) =>

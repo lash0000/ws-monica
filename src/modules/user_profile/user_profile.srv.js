@@ -43,6 +43,29 @@ class UserProfileService {
     }
   }
 
+  async myUpdateProfile(user_id, payload) {
+    const transaction = await sequelize.transaction();
+
+    try {
+      const profile = await mdl_UserProfile.findOne({
+        where: { user_id },
+        transaction
+      });
+
+      if (!profile) throw new Error('Profile not found');
+
+      const updated = await profile.update(payload, { transaction });
+      await transaction.commit();
+
+      this.io.emit('profile:updated', updated);
+      return updated;
+
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  }
+
 
   async getProfile() {
     return UserCredentials.findAll({

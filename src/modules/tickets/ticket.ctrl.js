@@ -73,6 +73,16 @@ class TicketController {
     }
   };
 
+  myTickets = async (req, res) => {
+    try {
+      const user_id = req.params.id;
+      const tickets = await this.TicketService.MyTickets(user_id);
+      res.json(tickets);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  };
+
   updateTicket = async (req, res) => {
     try {
       const result = await this.TicketService.updateTicket(req);

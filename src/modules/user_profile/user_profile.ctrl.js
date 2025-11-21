@@ -23,6 +23,16 @@ class UserProfileController {
     }
   }
 
+  myUpdateProfile = async (req, res) => {
+    try {
+      const user_id = req.user.user_id;
+      const updated = await this.service.myUpdateProfile(user_id, req.body);
+      return res.json(updated);
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   getProfile = async (req, res) => {
     try {
       const data = await this.service.getProfile();

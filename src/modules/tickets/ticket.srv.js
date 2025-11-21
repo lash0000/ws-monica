@@ -197,6 +197,28 @@ module.exports = (io) => {
       });
     }
 
+    async MyTickets(user_id) {
+      try {
+        if (!user_id) {
+          throw new Error("Missing user_id");
+        }
+
+        const tickets = await mdl_Tickets.findAll({
+          where: { user_id },
+          order: [["createdAt", "DESC"]],
+          include: [
+            { model: mdl_Files },
+            { model: UserCredentials }
+          ]
+        });
+
+        return tickets;
+
+      } catch (err) {
+        throw err;
+      }
+    }
+
     async deleteTicket(req) {
       return new Promise(async (resolve, reject) => {
         const ticketId = req.params.id;
