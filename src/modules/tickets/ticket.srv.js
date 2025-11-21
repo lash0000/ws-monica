@@ -1,11 +1,9 @@
-// TODO: Adddata and updateData with EmailService
-
 const FileUploadServiceFactory = require("../files/files.srv");
 const mdl_Tickets = require("./ticket.mdl");
 const mdl_Files = require("../files/files.mdl");
 const UserCredentials = require("../user_creds/user_creds.mdl");
 const { v4: uuidv4 } = require("uuid");
-const Busboy = require("busboy");
+const Busboy = require("@fastify/busboy");
 const mime = require("mime-types");
 const mdl_UserProfile = require('../user_profile/user_profile.mdl');
 
@@ -82,7 +80,6 @@ module.exports = (io) => {
             }
 
             await transaction.commit();
-
             io.emit("tickets:new", ticket);
             resolve({
               ticket,
@@ -200,6 +197,52 @@ module.exports = (io) => {
       });
     }
 
+    async deleteTicket(req) {
+      return new Promise(async (resolve, reject) => {
+        const ticketId = req.params.id;
+        const t = await mdl_Tickets.sequelize.transaction();
+
+        try {
+          const ticket = await mdl_Tickets.findByPk(ticketId, {
+            include: [{ model: mdl_Files }],
+            transaction: t
+          });
+
+          if (!ticket) {
+            await t.rollback();
+            return reject({ message: "Ticket not found" });
+          }
+
+          // 2. Delete files from storage (Straight forward coz it has DELETE CASCADE from model)
+          for (const file of ticket.Files) {
+            try {
+              await FileUploadService.deleteFile(file.filename);
+            } catch (err) {
+              console.error("File deletion error (ignored):", err);
+            }
+          }
+
+          await mdl_Files.destroy({
+            where: { ticket_id: ticketId },
+            transaction: t
+          });
+
+          await ticket.destroy({ transaction: t });
+          await t.commit();
+
+          io.emit("tickets:delete", { ticket_id: ticketId });
+
+          resolve({
+            message: "Ticket deleted successfully",
+            ticket_id: ticketId
+          });
+
+        } catch (err) {
+          await t.rollback();
+          reject(err);
+        }
+      });
+    }
   }
 
   return new TicketService();

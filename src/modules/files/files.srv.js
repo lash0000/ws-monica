@@ -1,5 +1,5 @@
 const { BlobServiceClient } = require('@azure/storage-blob');
-const Busboy = require('busboy');
+const Busboy = require('@fastify/busboy');
 const mime = require('mime-types');
 const mdl_Files = require('./files.mdl');
 
@@ -106,6 +106,17 @@ module.exports = (io) => {
 
       return { url: blockBlobClient.url };
     }
+
+    async deleteFile(filename) {
+      try {
+        const blockBlobClient = containerClient.getBlockBlobClient(filename);
+        await blockBlobClient.deleteIfExists();
+        console.log("Azure Blob deleted:", filename);
+      } catch (err) {
+        console.error("Azure Blob deletion failed:", err);
+      }
+    }
+
   }
 
   return new FileUploadService();

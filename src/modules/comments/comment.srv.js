@@ -1,4 +1,7 @@
 const mdl_Comments = require('./comment.mdl');
+const mdl_Tickets = require('../tickets/ticket.mdl');
+const mdl_UserCredentials = require('../user_creds/user_creds.mdl');
+const mdl_UserProfile = require('../user_profile/user_profile.mdl');
 
 class CommentService {
   constructor(category) {
@@ -45,6 +48,11 @@ class CommentService {
           parent_id,
           category: this.category
         },
+        include: [
+          { model: mdl_Tickets, as: 'Ticket_Details' },
+          { model: mdl_UserCredentials, as: 'UserCredential' },
+          { model: mdl_UserProfile, as: 'UserProfile' }
+        ],
         order: [['createdAt', 'ASC']]
       });
     } catch (err) {
@@ -69,6 +77,11 @@ class CommentService {
     try {
       return await mdl_Comments.findAll({
         where: { commented_by: user_id },
+        include: [
+          { model: mdl_Tickets, as: 'Ticket_Details' },
+          { model: mdl_UserCredentials, as: 'UserCredential' },
+          { model: mdl_UserProfile, as: 'UserProfile' }
+        ],
         order: [['createdAt', 'DESC']]
       });
     } catch (err) {
