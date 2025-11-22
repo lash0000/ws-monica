@@ -6,11 +6,16 @@ const { v4: uuidv4 } = require("uuid");
 const Busboy = require("@fastify/busboy");
 const mime = require("mime-types");
 const mdl_UserProfile = require('../user_profile/user_profile.mdl');
+const CommentService = require('../comments/comment.srv');
 
 module.exports = (io) => {
   const FileUploadService = FileUploadServiceFactory(io);
 
-  class TicketService {
+  class TicketService extends CommentService {
+    constructor() {
+      super("ticket");
+    }
+
     async createTicket(req) {
       return new Promise((resolve, reject) => {
         const busboy = Busboy({ headers: req.headers });
