@@ -115,7 +115,12 @@ module.exports = (io) => {
       return mdl_Tickets.findByPk(id, {
         include: [
           { model: mdl_Files },
-          { model: UserCredentials }
+          {
+            model: UserCredentials,
+            include: [
+              { model: mdl_UserProfile }
+            ]
+          }
         ]
       });
     }
