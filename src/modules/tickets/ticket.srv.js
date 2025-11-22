@@ -208,7 +208,12 @@ module.exports = (io) => {
           order: [["createdAt", "DESC"]],
           include: [
             { model: mdl_Files },
-            { model: UserCredentials }
+            {
+              model: UserCredentials,
+              include: [
+                { model: mdl_UserProfile }
+              ]
+            },
           ]
         });
 
