@@ -35,11 +35,7 @@ const io = new Server(server, {
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true
   },
-
-  // MUST add fallback transport
-  transports: ["websocket", "polling"],
-
-  // Allow older Engine.IO handshake (some browsers need this)
+  transports: ["polling"],
   allowEIO3: true
 });
 
