@@ -17,23 +17,13 @@ module.exports = (io) => {
 
     // join/leave specific ticket room
     socket.on("tickets:join", (ticket_id) => {
-      try {
-        if (!ticket_id) return;
-        socket.join(`ticket:${ticket_id}`);
-        console.info(`socket ${socket.id} joined ticket:${ticket_id}`);
-      } catch (err) {
-        console.warn("join room error", err?.message);
-      }
+      console.log("🟢 client joined:", socket.id, "room:", `ticket:${ticket_id}`);
+      socket.join(`ticket:${ticket_id}`);
     });
 
     socket.on("tickets:leave", (ticket_id) => {
-      try {
-        if (!ticket_id) return;
-        socket.leave(`ticket:${ticket_id}`);
-        console.info(`socket ${socket.id} left ticket:${ticket_id}`);
-      } catch (err) {
-        console.warn("leave room error", err?.message);
-      }
+      console.log("🔴 client left:", socket.id, "room:", `ticket:${ticket_id}`);
+      socket.leave(`ticket:${ticket_id}`);
     });
 
     // fetch all tickets
@@ -69,24 +59,20 @@ module.exports = (io) => {
 
     // Add comment via socket (payload must contain parent_id, category, comment, commented_by)
     socket.on("tickets:comments:add", async (payload) => {
+      console.log("🟠 NEW COMMENT received:", payload);
+
       try {
-        if (!payload || !payload.parent_id || !payload.comment || !payload.commented_by) {
-          return socket.emit("tickets:error", { action: "comments:add", payload, error: "Missing fields" });
-        }
-
-        // Add comment through service (persist)
         const newComment = await TicketService.addNewComment(payload);
+        console.log("🟣 SAVED comment:", newComment);
 
-        // confirm to the sender
         socket.emit("tickets:comments:added", newComment);
+        console.log("🟢 emitted to sender");
 
-        // broadcast to everyone in the ticket room (including sender)
         io.to(`ticket:${payload.parent_id}`).emit("tickets:comments:new", newComment);
+        console.log("🔵 broadcast to room:", `ticket:${payload.parent_id}`);
 
-        // also send to general listeners if needed
-        io.emit("tickets:comment:global", { ticket_id: payload.parent_id, comment: newComment });
       } catch (err) {
-        socket.emit("tickets:error", { action: "comments:add", payload, error: err.message });
+        console.log("❌ ERROR in add:", err);
       }
     });
 
