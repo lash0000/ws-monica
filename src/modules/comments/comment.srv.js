@@ -12,18 +12,30 @@ class CommentService {
   // Add new comment
   async addNewComment({ parent_id, commented_by, comment }) {
     try {
-      const newComment = await mdl_Comments.create({
+      // Step 1: Create new comment
+      const created = await mdl_Comments.create({
         parent_id,
         commented_by,
         comment,
         category: this.category
       });
 
-      return newComment;
+      // Step 2: Fetch full joined comment (VERY IMPORTANT)
+      const fullComment = await mdl_Comments.findOne({
+        where: { id: created.id },
+        include: [
+          { model: mdl_Tickets, as: 'Ticket_Details' },
+          { model: mdl_UserCredentials, as: 'UserCredential', include: [{ model: mdl_UserProfile, as: 'UserProfile' }] },
+          { model: mdl_UserProfile, as: 'UserProfile' }
+        ]
+      });
+
+      return fullComment;
     } catch (err) {
       throw new Error(`Failed to add comment: ${err.message}`);
     }
   }
+
 
   // Update a comment by ID
   async updateComment(id, updates) {

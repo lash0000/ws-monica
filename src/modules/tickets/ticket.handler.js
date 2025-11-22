@@ -62,20 +62,35 @@ module.exports = (io) => {
       console.log("🟠 NEW COMMENT received:", payload);
 
       try {
-        const newComment = await TicketService.addNewComment(payload);
-        console.log("🟣 SAVED comment:", newComment);
+        // Step 1 → create comment
+        const created = await TicketService.addNewComment(payload);
+        console.log("🟣 SAVED comment:", created);
 
-        socket.emit("tickets:comments:added", newComment);
-        console.log("🟢 emitted to sender");
+        // Step 2 → fetch full joined comment
+        const fullComment = await mdl_Comments.findOne({
+          where: { id: created.id },
+          include: [
+            { model: mdl_Tickets, as: "Ticket_Details" },
+            {
+              model: mdl_UserCredentials,
+              as: "UserCredential",
+              include: [{ model: mdl_UserProfile, as: "UserProfile" }]
+            },
+            { model: mdl_UserProfile, as: "UserProfile" }
+          ]
+        });
 
-        io.to(`ticket:${payload.parent_id}`).emit("tickets:comments:new", newComment);
+        // Step 3 → emit full joined object
+        socket.emit("tickets:comments:added", fullComment);
+        console.log("🟢 emitted to sender (full comment)");
+
+        io.to(`ticket:${payload.parent_id}`).emit("tickets:comments:new", fullComment);
         console.log("🔵 broadcast to room:", `ticket:${payload.parent_id}`);
 
       } catch (err) {
         console.log("❌ ERROR in add:", err);
       }
     });
-
     // fetch comments by user
     socket.on("tickets:comments:by_user", async (user_id) => {
       try {

@@ -20,15 +20,12 @@ const unifiedCors = {
   allowedHeaders: ["Content-Type", "Authorization", "Accept"]
 };
 
-// EXPRESS USES THE SAME CORS
 app.use(cors(unifiedCors));
 app.use(express.json());
 app.set('view engine', 'ejs');
 app.set('views', './views');
 
 const server = http.createServer(app);
-
-// SOCKET.IO USES THE SAME CORS
 const io = new Server(server, {
   cors: unifiedCors,
   transports: ["websocket"]
