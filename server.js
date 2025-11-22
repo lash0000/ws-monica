@@ -27,9 +27,22 @@ app.set('views', './views');
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: unifiedCors,
-  transports: ["websocket"]
+  cors: {
+    origin: [
+      "https://barangay-santa-monica.vercel.app",
+      "http://localhost:5173"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    credentials: true
+  },
+
+  // MUST add fallback transport
+  transports: ["websocket", "polling"],
+
+  // Allow older Engine.IO handshake (some browsers need this)
+  allowEIO3: true
 });
+
 
 const PORT = process.env.PORT || 8080;
 let dbSessionCount = 0;
