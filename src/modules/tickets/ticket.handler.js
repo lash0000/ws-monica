@@ -4,6 +4,11 @@ module.exports = (io) => {
   const TicketService = TicketServiceFactory(io);
 
   io.on("connection", (socket) => {
+    // Join a room
+    socket.on("tickets:join", (ticket_id) => {
+      socket.join(`ticket:${ticket_id}`);
+    });
+
     socket.on("tickets:fetch_all", async () => {
       socket.emit("tickets:list", await TicketService.getAllTickets());
     });
@@ -48,14 +53,16 @@ module.exports = (io) => {
       socket.emit("tickets:comments:detail", comment);
     });
 
-    // Add new comment through sockets (optional)
     socket.on("tickets:comments:add", async (payload) => {
       const newComment = await TicketService.addNewComment(payload);
+
+      // emit to sender
       socket.emit("tickets:comments:added", newComment);
 
-      // Broadcast to other users
-      socket.broadcast.emit("tickets:comments:new", newComment);
+      // broadcast to SAME ticket room
+      io.to(`ticket:${payload.parent_id}`).emit("tickets:comments:new", newComment);
     });
+
 
     // Fetch all comments made by a specific user
     socket.on("tickets:comments:by_user", async (user_id) => {
