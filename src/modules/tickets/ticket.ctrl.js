@@ -5,6 +5,7 @@ const mdl_UserCredentials = require('../user_creds/user_creds.mdl');
 
 class TicketController {
   constructor(io) {
+    this.io = io;
     this.TicketService = TicketServiceFactory(io);
   }
 
@@ -102,10 +103,9 @@ class TicketController {
       });
 
       const room = `ticket:${req.params.id}`;
-      req.io.to(room).emit("ticket:comment:added", result);
 
-      // Also echo back to the sender (optional)
-      req.io.emit("ticket:comment:added", result);
+      this.io.to(room).emit("ticket:comment:added", result);
+      this.io.emit("ticket:comment:added", result);
 
       res.json(result);
     } catch (err) {
