@@ -4,70 +4,74 @@ module.exports = (io) => {
   const TicketService = TicketServiceFactory(io);
 
   io.on("connection", (socket) => {
-    console.log("Connected:", socket.id);
+    console.log("Socket connected:", socket.id);
 
-    // -------------------------------
-    // JOIN TICKET ROOM
-    // -------------------------------
+    // -----------------------------
+    // JOIN ROOM
+    // -----------------------------
     socket.on("tickets:join", (ticket_id) => {
       const room = `ticket_${ticket_id}`;
       socket.join(room);
-      console.log(`Socket ${socket.id} joined ${room}`);
+
+      console.log(`[SOCKET] ${socket.id} joined room ${room}`);
     });
 
-    // -------------------------------
-    // LEAVE TICKET ROOM
-    // -------------------------------
+    // -----------------------------
+    // LEAVE ROOM
+    // -----------------------------
     socket.on("tickets:leave", (ticket_id) => {
       const room = `ticket_${ticket_id}`;
       socket.leave(room);
-      console.log(`Socket ${socket.id} left ${room}`);
+
+      console.log(`[SOCKET] ${socket.id} left room ${room}`);
     });
 
-    // -------------------------------
-    // FETCH ALL COMMENTS
-    // -------------------------------
+    // -----------------------------
+    // FETCH COMMENTS
+    // -----------------------------
     socket.on("tickets:comments:fetch_all", async (ticket_id) => {
       const comments = await TicketService.getAllComment(ticket_id);
       socket.emit("tickets:comments:list", comments);
     });
 
-    // -------------------------------
-    // ADD COMMENT + BROADCAST
-    // -------------------------------
+    // -----------------------------
+    // ADD NEW COMMENT (REALTIME + DB SAVE)
+    // -----------------------------
     socket.on("tickets:comments:add", async (payload) => {
-      const saved = await TicketService.addNewComment(payload);
+      try {
+        console.log("[SOCKET] New comment payload:", payload);
 
-      const room = `ticket_${payload.ticket_id}`;
+        // 1. Save to Database
+        const newComment = await TicketService.addNewComment(payload);
 
-      // Send back to sender
-      socket.emit("tickets:comments:added", saved);
+        console.log("[SOCKET] Saved comment:", newComment);
 
-      // Broadcast to everyone else in that same ticket room
-      socket.to(room).emit("tickets:comments:new", saved);
+        // 2. Emit back to sender
+        socket.emit("tickets:comments:added", newComment);
+
+        // 3. Emit to everyone else in the room
+        const room = `ticket_${payload.ticket_id}`;
+        socket.to(room).emit("tickets:comments:new", newComment);
+
+      } catch (err) {
+        console.error("Error saving comment:", err.message);
+        socket.emit("tickets:comments:error", { message: err.message });
+      }
     });
 
-    // -------------------------------
-    // TYPING INDICATOR (OPTIONAL)
-    // -------------------------------
-    socket.on("tickets:typing", (payload) => {
-      const room = `ticket_${payload.ticket_id}`;
-      socket.to(room).emit("tickets:typing", {
-        user_id: payload.user_id,
-        isTyping: true,
-      });
+    // -----------------------------
+    // MY COMMENTS (OPTIONAL)
+    // -----------------------------
+    socket.on("tickets:comments:by_user", async (user_id) => {
+      const myComments = await TicketService.myComment(user_id);
+      socket.emit("tickets:comments:my", myComments);
     });
 
-    socket.on("tickets:stop_typing", (payload) => {
-      const room = `ticket_${payload.ticket_id}`;
-      socket.to(room).emit("tickets:stop_typing", {
-        user_id: payload.user_id,
-        isTyping: false,
-      });
-    });
-
+    // -----------------------------
+    // DISCONNECT
+    // -----------------------------
     socket.on("disconnect", () => {
-      console.log(`Disconnected: ${socket.id}`);
+      console.log("Socket disconnected:", socket.id);
     });
   });
 };
