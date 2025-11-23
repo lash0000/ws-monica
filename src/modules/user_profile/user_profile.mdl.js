@@ -58,6 +58,10 @@ const mdl_UserProfile = sequelize.define('UserProfile', {
   civil_status: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  contact_person: {
+    type: DataTypes.JSONB,
+    allowNull: true
   }
 }, {
   tableName: 'user_profile',
