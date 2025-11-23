@@ -40,8 +40,12 @@ module.exports = (io) => {
     });
 
     // Optional typing indicator
-    socket.on("ticket:typing", ({ ticket_id, user }) => {
-      socket.broadcast.to(`ticket:${ticket_id}`).emit("ticket:typing", user);
+    socket.on("typing:start", (ticketId) => {
+      socket.to(ticketId).emit("typing:incoming", { ticketId, user: socket.user });
+    });
+
+    socket.on("typing:stop", (ticketId) => {
+      socket.to(ticketId).emit("typing:clear", { ticketId });
     });
   });
 };
