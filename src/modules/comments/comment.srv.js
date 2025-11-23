@@ -2,6 +2,8 @@ const mdl_Comments = require('./comment.mdl');
 const mdl_Tickets = require('../tickets/ticket.mdl');
 const mdl_UserCredentials = require('../user_creds/user_creds.mdl');
 const mdl_UserProfile = require('../user_profile/user_profile.mdl');
+const EmailTemplate = require('../../utils/email_template.utils');
+const { sendEmail } = require('../../utils/nodemailer.utils');
 
 class CommentService {
   constructor(category) {
@@ -12,7 +14,6 @@ class CommentService {
   // Add new comment
   async addNewComment({ parent_id, commented_by, comment }) {
     try {
-      // Step 1: Create new comment
       const created = await mdl_Comments.create({
         parent_id,
         commented_by,
@@ -20,14 +21,110 @@ class CommentService {
         category: this.category
       });
 
-      // Step 2: Fetch full joined comment (VERY IMPORTANT)
       const fullComment = await mdl_Comments.findOne({
         where: { id: created.id },
         include: [
           { model: mdl_Tickets, as: 'Ticket_Details' },
-          { model: mdl_UserCredentials, as: 'UserCredential', include: [{ model: mdl_UserProfile, as: 'UserProfile' }] },
+          {
+            model: mdl_UserCredentials,
+            as: 'UserCredential',
+            include: [{ model: mdl_UserProfile, as: 'UserProfile' }]
+          },
           { model: mdl_UserProfile, as: 'UserProfile' }
         ]
+      });
+
+      // ============================================
+      // EMAIL LOGIC SECTION
+      // ============================================
+
+      const ticket = fullComment.Ticket_Details;
+      if (!ticket) {
+        console.warn("No ticket details found — cannot evaluate creator/recipient logic");
+        return fullComment;
+      }
+
+      const ticketCreatorID = ticket.user_id;
+      const commenterID = commented_by;
+
+      // Fetch credential of ticket creator
+      const ticketCreatorCred = await mdl_UserCredentials.findOne({
+        where: { user_id: ticketCreatorID },
+        attributes: ["email"]
+      });
+
+      // Fetch credential of the commenter
+      const commenterCred = await mdl_UserCredentials.findOne({
+        where: { user_id: commenterID },
+        attributes: ["email"]
+      });
+
+      // Guard checks
+      if (!commenterCred?.email) {
+        console.warn("Commenter has no email:", commenterID);
+        return fullComment;
+      }
+
+      if (!ticketCreatorCred?.email) {
+        console.warn("Ticket creator has no email:", ticketCreatorID);
+        return fullComment;
+      }
+
+      // ---------------------------------------------------
+      // CASE 1: The commenter is the ticket creator
+      // ---------------------------------------------------
+      if (commenterID === ticketCreatorID) {
+        const { html, subject } = await EmailTemplate.as_renderAll(
+          "ticket_comments/creator",
+          {
+            comment,
+            ticket,
+            subject: "Your comment has been added to your ticket."
+          }
+        );
+
+        await sendEmail({
+          to: ticketCreatorCred.email,
+          subject,
+          html
+        });
+
+        return fullComment;
+      }
+
+      // ---------------------------------------------------
+      // CASE 2: The commenter is a recipient (NOT creator)
+      // ---------------------------------------------------
+      // Send to recipient (commenter)
+      const emailToRecipient = await EmailTemplate.as_renderAll(
+        "ticket_comments/recipient",
+        {
+          comment,
+          ticket,
+          subject: "Your comment has been posted to the ticket."
+        }
+      );
+
+      await sendEmail({
+        to: commenterCred.email,
+        subject: emailToRecipient.subject,
+        html: emailToRecipient.html
+      });
+
+      // Send to ticket creator
+      const emailToCreator = await EmailTemplate.as_renderAll(
+        "ticket_comments/recipient",
+        {
+          comment,
+          ticket,
+          subject: "A new comment has been posted to your ticket."
+        }
+      );
+
+      await sendEmail({
+        to: ticketCreatorCred.email,
+        subject: emailToCreator.subject,
+        html: emailToCreator.html
       });
 
       return fullComment;
@@ -35,7 +132,6 @@ class CommentService {
       throw new Error(`Failed to add comment: ${err.message}`);
     }
   }
-
 
   // Update a comment by ID
   async updateComment(id, updates) {

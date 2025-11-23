@@ -8,6 +8,7 @@ const UserCredentials = require('./user_creds.mdl');
 const UserSessions = require('../user_sessions/user_sessions.mdl');
 const UserSessionsService = require('../user_sessions/user_sessions.srv');
 const { broadcastSessionUpdate } = require('../../utils/realtime.utils');
+const mdl_UserProfile = require('../user_profile/user_profile.mdl');
 
 class UserCredsService extends UserSessionsService {
   constructor(io) {
@@ -265,7 +266,24 @@ class UserCredsService extends UserSessionsService {
     };
   }
 
+  async GetAllCredentials(filters = {}) {
+    try {
+      const users = await UserCredentials.findAll({
+        where: filters,
+        include: [
+          {
+            model: mdl_UserProfile,
+          }
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+      return users;
+    } catch (err) {
+      throw new Error('Failed to fetch user credentials: ' + err.message);
+    }
+  }
 
+  // This is for show!
   async _updateSessionCount() {
     const activeCount = await this.countActiveSessions();
     broadcastSessionUpdate(this.io, activeCount);

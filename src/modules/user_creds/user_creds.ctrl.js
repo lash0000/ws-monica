@@ -42,6 +42,15 @@ class UserCredsController {
       this.handler.error(res, error.message || 'Validate session failed', 403);
     }
   }
+
+  async allCredentials(req, res) {
+    try {
+      const result = await this.service.GetAllCredentials();
+      this.handler.success(res, 'All credentials appears', result);
+    } catch (error) {
+      this.handler.error(res, error.message || 'Getting credentials failed', 403);
+    }
+  }
 }
 
 module.exports = UserCredsController;
