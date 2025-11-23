@@ -8,6 +8,7 @@ const UserSessions = require('./src/modules/user_sessions/user_sessions.mdl');
 const mdl_Files = require('./src/modules/files/files.mdl');
 const { broadcastSessionUpdate } = require('./src/utils/realtime.utils');
 const { BlobServiceClient } = require('@azure/storage-blob');
+const { loadSocketModules } = require('./src/utils/realtime.utils');
 
 const app = express();
 const unifiedCors = {
@@ -38,7 +39,7 @@ const io = new Server(server, {
   transports: ["polling", "websocket"],
   allowEIO3: true
 });
-
+loadSocketModules(io);
 
 const PORT = process.env.PORT || 8080;
 let dbSessionCount = 0;
