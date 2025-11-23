@@ -12,7 +12,6 @@ module.exports = (io) => {
     socket.on("tickets:join", (ticket_id) => {
       const room = `ticket_${ticket_id}`;
       socket.join(room);
-
       console.log(`[SOCKET] ${socket.id} joined room ${room}`);
     });
 
@@ -22,12 +21,11 @@ module.exports = (io) => {
     socket.on("tickets:leave", (ticket_id) => {
       const room = `ticket_${ticket_id}`;
       socket.leave(room);
-
       console.log(`[SOCKET] ${socket.id} left room ${room}`);
     });
 
     // -----------------------------
-    // FETCH COMMENTS
+    // FETCH ALL COMMENTS
     // -----------------------------
     socket.on("tickets:comments:fetch_all", async (ticket_id) => {
       const comments = await TicketService.getAllComment(ticket_id);
@@ -39,18 +37,32 @@ module.exports = (io) => {
     // -----------------------------
     socket.on("tickets:comments:add", async (payload) => {
       try {
-        console.log("[SOCKET] New comment payload:", payload);
+        console.log("[SOCKET] Incoming comment payload:", payload);
 
-        // 1. Save to Database
-        const newComment = await TicketService.addNewComment(payload);
+        // FIX: Accept both parent_id and ticket_id
+        const parent_id = payload.parent_id || payload.ticket_id;
 
-        console.log("[SOCKET] Saved comment:", newComment);
+        if (!parent_id) {
+          console.log("[SOCKET] Missing parent_id/ticket_id in payload");
+          return socket.emit("tickets:comments:error", {
+            message: "Missing parent_id or ticket_id"
+          });
+        }
+
+        // 1. Save to database
+        const newComment = await TicketService.addNewComment({
+          parent_id,
+          commented_by: payload.commented_by,
+          comment: payload.comment
+        });
+
+        console.log("[SOCKET] Comment saved:", newComment?.id);
 
         // 2. Emit back to sender
         socket.emit("tickets:comments:added", newComment);
 
-        // 3. Emit to everyone else in the room
-        const room = `ticket_${payload.ticket_id}`;
+        // 3. Broadcast to room
+        const room = `ticket_${parent_id}`;
         socket.to(room).emit("tickets:comments:new", newComment);
 
       } catch (err) {
@@ -60,11 +72,11 @@ module.exports = (io) => {
     });
 
     // -----------------------------
-    // MY COMMENTS (OPTIONAL)
+    // GET COMMENTS BY USER
     // -----------------------------
     socket.on("tickets:comments:by_user", async (user_id) => {
-      const myComments = await TicketService.myComment(user_id);
-      socket.emit("tickets:comments:my", myComments);
+      const list = await TicketService.myComment(user_id);
+      socket.emit("tickets:comments:my", list);
     });
 
     // -----------------------------
