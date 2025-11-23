@@ -100,11 +100,18 @@ class TicketController {
         commented_by: req.body.commented_by,
         comment: req.body.comment
       });
+
+      const room = `ticket:${req.params.id}`;
+      req.io.to(room).emit("ticket:comment:added", result);
+
+      // Also echo back to the sender (optional)
+      req.io.emit("ticket:comment:added", result);
+
       res.json(result);
     } catch (err) {
       res.status(400).json({ error: err.message });
     }
-  }
+  };
 
   myComments = async (req, res) => {
     try {
