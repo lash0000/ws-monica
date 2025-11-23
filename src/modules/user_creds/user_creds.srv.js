@@ -55,9 +55,11 @@ class UserCredsService extends UserSessionsService {
         },
         transaction: t,
       });
-      if (existingActiveSession) {
+      // in case of emergency
+      // unsafe
+      /*if (existingActiveSession) {
         throw new Error('User is already logged in on another session.');
-      }
+      }*/
 
       const clientInfo = this._extractClientInfo(req);
       const session = await UserSessions.create(
@@ -88,7 +90,7 @@ class UserCredsService extends UserSessionsService {
           session_id: session.session_id,
         },
         process.env.JWT_REFRESH_SECRET,
-        { expiresIn: '15d' }
+        { expiresIn: '7d' }
       );
 
       /*
@@ -99,14 +101,14 @@ class UserCredsService extends UserSessionsService {
         sameSite: 'None',
         partitioned: true,
         path: '/',
-        maxAge: 15 * 24 * 60 * 60 * 1000
+        maxAge: 7 * 24 * 60 * 60 * 1000
       });
       * offline side (httpOnly) 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: false,
         secure: false,
         sameSite: 'Lax',
-        maxAge: 15 * 24 * 60 * 60 * 1000
+        maxAge: 7 * 24 * 60 * 60 * 1000
       });
        *
        */
@@ -117,7 +119,7 @@ class UserCredsService extends UserSessionsService {
         sameSite: 'None',
         partitioned: true,
         path: '/',
-        maxAge: 15 * 24 * 60 * 60 * 1000
+        maxAge: 7 * 24 * 60 * 60 * 1000
       });
 
       setImmediate(async () => {
@@ -175,7 +177,7 @@ class UserCredsService extends UserSessionsService {
         httpOnly: false,
         secure: false,
         sameSite: 'Lax',
-        maxAge: 15 * 24 * 60 * 60 * 1000,
+        maxAge: 7 * 24 * 60 * 60 * 1000
       });
        */
       req.res.clearCookie("refreshToken", {
@@ -229,36 +231,40 @@ class UserCredsService extends UserSessionsService {
   }
 
   // For accessing the protected routes
-  async validateSession(refreshToken) {
-    if (!refreshToken) {
-      throw new Error('Missing refresh token');
+  async validateSession(refreshToken, user_id = null) {
+    let decoded = null;
+
+    if (refreshToken) {
+      try {
+        decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+      } catch (err) {
+        decoded = null;
+      }
     }
 
-    try {
-      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-      const user = await UserCredentials.findByPk(decoded.user_id);
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      const session = await UserSessions.findOne({
-        where: {
-          session_id: decoded.session_id,
-          user_id: decoded.user_id,
-          logout_date: { [Op.is]: null },
-          logout_info: { [Op.is]: null },
-        },
-      });
-
-      if (!session) {
-        throw new Error('Session is invalid or expired');
-      }
-
-      return { session, decoded };
-    } catch (err) {
-      throw new Error('Invalid or expired refresh token');
+    const targetUserId = decoded?.user_id || user_id;
+    if (!targetUserId) {
+      return { session: null, decoded: null };
     }
+
+    const session = await UserSessions.findOne({
+      where: {
+        user_id: targetUserId,
+        logout_date: { [Op.is]: null },
+        logout_info: { [Op.is]: null },
+      },
+    });
+
+    if (!session) {
+      return { session: null, decoded: null };
+    }
+
+    return {
+      session,
+      decoded: decoded || { user_id: targetUserId, session_id: session.session_id }
+    };
   }
+
 
   async _updateSessionCount() {
     const activeCount = await this.countActiveSessions();
