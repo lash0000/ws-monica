@@ -78,7 +78,13 @@ class UserProfileService {
   }
 
   async getProfileByID(id) {
-    return mdl_UserProfile.findByPk(id);
+    return UserCredentials.findByPk(id, {
+      include: [
+        {
+          model: mdl_UserProfile,
+        }
+      ]
+    });
   }
 
   async myProfile(user_id) {
