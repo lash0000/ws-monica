@@ -27,34 +27,45 @@ class ApplicationService {
 
       const app = await mdl_Applications.create(payload, { transaction: t });
 
+      // Commit instantly
       await t.commit();
       this.io.emit('application:created', app);
-
-      const creds = await mdl_UserCredentials.findOne({
-        where: { user_id: payload.application_by }
+      this.sendEmailInBackground(app, profile).catch(err => {
+        console.error("Async email error:", err);
       });
-
-      if (creds?.email) {
-        const { html, subject } = await EmailTemplate.as_renderAll(
-          "applications/ongoing",
-          {
-            application: app,
-            profile,
-            subject: "Your application has been submitted for review."
-          }
-        );
-
-        await sendEmail({
-          to: creds.email,
-          subject,
-          html
-        });
-      }
 
       return app;
     } catch (err) {
       await t.rollback();
       throw err;
+    }
+  }
+
+  async sendEmailInBackground(app, profile) {
+    try {
+      const creds = await mdl_UserCredentials.findOne({
+        where: { user_id: app.application_by }
+      });
+
+      if (!creds?.email) return;
+
+      const { html, subject } = await EmailTemplate.as_renderAll(
+        "applications/ongoing",
+        {
+          application: app,
+          profile,
+          subject: "Your application has been submitted for review."
+        }
+      );
+
+      await sendEmail({
+        to: creds.email,
+        subject,
+        html
+      });
+
+    } catch (err) {
+      console.error("Background email sending failed:", err);
     }
   }
 
