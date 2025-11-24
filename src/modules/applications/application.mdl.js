@@ -36,6 +36,10 @@ const mdl_Applications = db_sequelize.define('Applications', {
     allowNull: false,
     defaultValue: 'for-review'
   },
+  additional_details: {
+    type: DataTypes.JSONB,
+    allowNull: true
+  }
 },
   {
     tableName: 'applications',
