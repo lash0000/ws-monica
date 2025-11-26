@@ -7,14 +7,17 @@ const Busboy = require("@fastify/busboy");
 const mime = require("mime-types");
 const mdl_UserProfile = require('../user_profile/user_profile.mdl');
 const CommentService = require('../comments/comment.srv');
+const { Op } = require('sequelize');
 
 module.exports = (io) => {
   const FileUploadService = FileUploadServiceFactory(io);
 
   class TicketService extends CommentService {
     constructor() {
-      super("ticket");
+    super("ticket");
+    this.Ticket = mdl_Tickets;
     }
+
 
     async createTicket(req) {
       return new Promise((resolve, reject) => {
@@ -285,6 +288,124 @@ module.exports = (io) => {
         }
       });
     }
+
+    async countBlotterTicket(params) {
+      try {
+        const count = await this.Ticket.count({
+          where: {
+            category: {
+              [Op.or]: ["Complaint", "Incident-Report"]
+            }
+          }
+        });
+
+        return count;
+      } catch (error) {
+        console.error("Error counting tickets:", error);
+        throw error;
+      }
+    }
+
+    async MyCountBlotter(user_id) {
+      try {
+        if (!user_id) {
+          throw new Error("Missing user_id");
+        }
+
+        const count = await this.Ticket.count({
+          where: {
+            user_id,
+            category: {
+              [Op.or]: ["Complaint", "Incident-Report"]
+            }
+          }
+        });
+
+        return count;
+
+      } catch (error) {
+        console.error("Error counting blotter tickets:", error);
+        throw error;
+      }
+      }
+
+    async MyCountTickets(user_id) {
+      try {
+        if (!user_id) {
+          throw new Error("Missing user_id");
+        }
+
+        const [resolved, archived, pending] = await Promise.all([
+          this.Ticket.count({ where: { user_id, status: "resolved" } }),
+          this.Ticket.count({ where: { user_id, status: "archived" } }),
+          this.Ticket.count({ where: { user_id, status: "pending" } })
+        ]);
+
+        return {
+          resolved,
+          archived,
+          pending
+        };
+      } catch (err) {
+        throw err;
+      }
+    }
+
+    async MyCountBlotterByStatus(user_id) {
+      try {
+        if (!user_id) {
+          throw new Error("Missing user_id");
+        }
+
+        const whereBase = {
+          user_id,
+          category: {
+            [Op.in]: ["Complaints", "Incident-Report"]
+            // or [Op.or]: ["Complaints", "Incident-Report"]
+          }
+        };
+
+        const [resolved, unresolved, archived, pending] = await Promise.all([
+          this.Ticket.count({
+            where: {
+              ...whereBase,
+              status: "resolved"
+            }
+          }),
+          this.Ticket.count({
+            where: {
+              ...whereBase,
+              status: "unresolved"
+            }
+          }),
+          this.Ticket.count({
+            where: {
+              ...whereBase,
+              status: "archived"
+            }
+          }),
+          this.Ticket.count({
+              where: {
+                ...whereBase,
+                status: "pending"
+              }
+          })
+        ]);
+
+        return {
+          resolved,
+          unresolved,
+          archived,
+          pending
+        };
+      } catch (error) {
+        console.error("Error counting blotter tickets by status:", error);
+        throw error;
+      }
+    }
+    
+
+
   }
 
   return new TicketService();

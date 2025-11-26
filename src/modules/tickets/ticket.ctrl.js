@@ -73,6 +73,26 @@ class TicketController {
     }
   };
 
+  myTicketsStatus = async (req, res) => {
+    try {
+      const user_id = req.params.id;
+      const tickets = await this.TicketService.MyCountTickets(user_id);
+      res.json(tickets);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  };
+
+  myBlotterTicketsStatus = async (req, res) => {
+    try {
+      const user_id = req.params.id;
+      const tickets = await this.TicketService.MyCountBlotterByStatus(user_id);
+      res.json(tickets);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  };
+
   updateTicket = async (req, res) => {
     try {
       const result = await this.TicketService.updateTicket(req);
@@ -133,6 +153,28 @@ class TicketController {
     try {
       const result = await this.TicketService.deleteTicket(req);
       res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  };
+
+  countBlotter = async (req, res) => {
+    try {
+      const count = await this.TicketService.countBlotterTicket();
+      res.json({ count });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to count blotter tickets",
+        error: error.message
+      });
+    }
+  }
+
+  myCountBlotterTickets = async (req, res) => {
+    try {
+      const user_id = req.params.id;
+      const tickets = await this.TicketService.MyCountBlotter(user_id);
+      res.json(tickets);
     } catch (err) {
       res.status(400).json({ error: err.message });
     }

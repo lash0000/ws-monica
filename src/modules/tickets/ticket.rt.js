@@ -13,6 +13,12 @@ module.exports = (io) => {
   router.get("/", f_authMiddleware, (req, res) =>
     controller.getAllTickets(req, res)
   );
+  router.get("/blotter", f_authMiddleware, (req, res) =>
+    controller.countBlotter(req, res)
+  );
+  router.get("/blotter/user/:id", f_authMiddleware, (req, res) =>
+    controller.myCountBlotterTickets(req, res)
+  );
   router.get("/:id", f_authMiddleware, (req, res) =>
     controller.TicketGetById(req, res)
   );
@@ -25,6 +31,15 @@ module.exports = (io) => {
   router.get("/user/:id", f_authMiddleware, (req, res) =>
     controller.myTickets(req, res)
   );
+  router.get("/user/status/:id", f_authMiddleware, (req, res) =>
+    controller.myTicketsStatus(req, res)
+  );
+  router.get("/user/blotter/status/:id", f_authMiddleware, (req, res) =>
+    controller.myBlotterTicketsStatus(req, res)
+  );
+  
+  //all counts per category
+
 
   // Comments (requries id)
   router.post("/:id/comments", f_authMiddleware, (req, res) =>
