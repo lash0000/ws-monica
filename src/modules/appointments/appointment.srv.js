@@ -4,6 +4,9 @@ const mdl_Appointments = require('./appointment.mdl');
 const mdl_UserCredentials = require('../user_creds/user_creds.mdl');
 const mdl_UserProfile = require('../user_profile/user_profile.mdl')
 const sequelize = require('../../../config/db.config');
+const { asyncTaskRunner } = require('../../utils/async_task_runner.utils');
+const EmailService = require('../email/email.srv');
+const moment = require('moment-timezone');
 
 class AppointmentService {
   constructor(io) {
@@ -21,18 +24,48 @@ class AppointmentService {
       });
 
       if (!profile) {
-        throw new Error("User profile does not exist. Complete profile first.");
+        throw new Error("User profile is incomplete. Complete profile first.");
       }
 
-      // Create appointment
+      const nowPH = moment().tz("Asia/Manila").startOf("minute");
+      const scheduledPH = moment(payload.date_scheduled).tz("Asia/Manila");
+
+      if (!scheduledPH.isValid()) {
+        throw new Error("Invalid date_scheduled format.");
+      }
+
+      if (scheduledPH.isBefore(nowPH)) {
+        throw new Error("You cannot schedule an appointment in the past.");
+      }
+
       const appointment = await mdl_Appointments.create(payload, { transaction: t });
+      const appointmentForEmail = {
+        id: appointment.id,
+        category: appointment.category,
+        status: appointment.status,
+        details: appointment.details,
+        remarks: appointment.remarks,
+        date_scheduled_iso: appointment.date_scheduled,
+        date_scheduled_formatted: moment(appointment.date_scheduled)
+          .tz("Asia/Manila")
+          .format("MMMM D, YYYY h:mm A"),
+      };
 
       await t.commit();
-
-      // Emit websocket event
       this.io.emit('appointment:created', appointment);
 
+      // Background email
+      asyncTaskRunner(() =>
+        EmailService.sendToUser({
+          user_id: payload.appointment_by,
+          template: "appointments/creator",
+          subject: "Your schedule of appointment for Telekonsulta has been submitted.",
+          data: { appointment: appointmentForEmail, profile }
+        })
+      );
+
       return appointment;
+
     } catch (err) {
       await t.rollback();
       throw err;
@@ -45,13 +78,56 @@ class AppointmentService {
     try {
       const appointment = await mdl_Appointments.findByPk(id, { transaction: t });
       if (!appointment) throw new Error('Appointment not found');
-
       await appointment.update(payload, { transaction: t });
 
-      await t.commit();
+      const profile = await mdl_UserProfile.findOne({
+        where: { user_id: appointment.appointment_by }
+      });
 
-      // Emit websocket event
+      if (!profile) {
+        throw new Error("Your user profile went missing or incomplete. Complete profile first.");
+      }
+
+      const appointmentEmailData = {
+        id: appointment.id,
+        category: appointment.category,
+        status: appointment.status,
+        details: appointment.details,
+        remarks: appointment.remarks,
+        date_scheduled_iso: appointment.date_scheduled,
+        date_scheduled_formatted: moment(appointment.date_scheduled)
+          .tz("Asia/Manila")
+          .format("MMMM D, YYYY h:mm A")
+      };
+
+      await t.commit();
       this.io.emit('appointment:updated', appointment);
+
+      let templatePath = "";
+      let subjectLine = "";
+
+      switch (appointment.status) {
+        case "withdrawn":
+          templatePath = "appointments/withdrawn";
+          subjectLine = "Your appointment has been withdrawn.";
+          break;
+        default:
+          templatePath = "appointments/actions";
+          subjectLine = "Your appointment has been updated.";
+          break;
+      }
+
+      asyncTaskRunner(() =>
+        EmailService.sendToUser({
+          user_id: appointment.appointment_by,
+          template: templatePath,
+          subject: subjectLine,
+          data: {
+            appointment: appointmentEmailData,
+            profile
+          }
+        })
+      );
 
       return appointment;
     } catch (err) {
@@ -59,6 +135,7 @@ class AppointmentService {
       throw err;
     }
   }
+
   async getAppointments(filters = {}) {
     const { status, appointment_by, action_by } = filters;
     const where = {};

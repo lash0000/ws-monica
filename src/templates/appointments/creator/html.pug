@@ -48,6 +48,7 @@ html(lang="en")
           padding: 12px 20px !important;
         }
       }
+
   body
     div(style="max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);border: 1px solid #E2E8F0;")
       
@@ -58,10 +59,45 @@ html(lang="en")
 
       // Content
       div(style="padding:32px 40px;color:#333333;line-height:1.6;")
-        div(style="margin-bottom:16px;font-size:24px;font-weight:700;") Greetings,
+        div(style="margin-bottom:16px;font-size:24px;font-weight:700;")
+          | Greetings,
         
         div(style="margin-bottom:16px;font-size:14px;")
-          | Your appointment has been successfully created and recorded sa ating platform.
+          | Para sa ating telekonsulta your appointment has been successfully created and recorded sa ating platform.
+
+        div(style="margin-bottom:16px;font-size:14px;")
+          | Below are the details of your appointment.
+
+        table(width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;max-width:600px;margin:20px auto;background:#ffffff;border:1px solid #e5e5e5;")
+          tr
+            th(style="background:#f7f7f7;text-align:left;padding:12px;border-bottom:1px solid #e5e5e5;width:35%;font-size:14px;font-weight:600;")
+              | Field
+            th(style="background:#f7f7f7;text-align:left;padding:12px;border-bottom:1px solid #e5e5e5;font-size:14px;font-weight:600;")
+              | Value
+
+          tr
+            td(style="padding:12px;border-bottom:1px solid #f0f0f0;font-size:14px;")
+              | Scheduled Date
+            td(style="padding:12px;border-bottom:1px solid #f0f0f0;font-size:14px;")
+              | #{appointment.date_scheduled_formatted}
+
+          tr
+            td(style="padding:12px;border-bottom:1px solid #f0f0f0;font-size:14px;")
+              | Category
+            td(style="padding:12px;border-bottom:1px solid #f0f0f0;font-size:14px;")
+              | #{appointment.category}
+
+          tr
+            td(style="padding:12px;border-bottom:1px solid #f0f0f0;font-size:14px;")
+              | Details
+            td(style="padding:12px;border-bottom:1px solid #f0f0f0;font-size:14px;white-space:pre-line;")
+              | #{appointment.details}
+
+          tr
+            td(style="padding:12px;font-size:14px;")
+              | Remarks
+            td(style="padding:12px;font-size:14px;white-space:pre-line;")
+              | #{appointment.remarks}
 
         div(style="margin-bottom:16px;font-size:14px;")
           | Our team will review the provided information and confirm the schedule details shortly. You will receive another notification once your appointment has been officially confirmed.
@@ -84,4 +120,5 @@ html(lang="en")
       div(style="background-color:#f4f4f4;padding:16px 40px;font-size:12px;color:#666666;line-height:1.5;text-align:center;")
         p(style="margin:0;")
           | Barangay Santa Monica is one of the progressive barangays located in District 5 & Novaliches, under the administrative jurisdiction of Quezon City Hall. Novaliches District Center, Jordan Plains, Barangay Sta. Monica.
-        p(style="margin: 12px 0 0 0;") © #{new Date().getFullYear()}, Barangay Santa Monica of Quezon City, All rights reserved.
+        p(style="margin: 12px 0 0 0;")
+          | © #{new Date().getFullYear()}, Barangay Santa Monica of Quezon City, All rights reserved.

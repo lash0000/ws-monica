@@ -3,9 +3,8 @@ const sequelize = require('../../../config/db.config');
 const mdl_Applications = require('./application.mdl');
 const mdl_UserProfile = require('../user_profile/user_profile.mdl');
 const mdl_UserCredentials = require('../user_creds/user_creds.mdl');
-const EmailTemplate = require('../../utils/email_template.utils');
-const { sendEmail } = require('../../utils/nodemailer.utils');
-
+const { asyncTaskRunner } = require('../../utils/async_task_runner.utils');
+const EmailService = require('../email/email.srv');
 
 class ApplicationService {
   constructor(io) {
@@ -22,7 +21,7 @@ class ApplicationService {
       });
 
       if (!profile) {
-        throw new Error("User profile does not exist. Complete profile first.");
+        throw new Error("Your user profile is incomplete. Complete profile first.");
       }
 
       const app = await mdl_Applications.create(payload, { transaction: t });
@@ -30,42 +29,21 @@ class ApplicationService {
       // Commit instantly
       await t.commit();
       this.io.emit('application:created', app);
-      this.sendEmailInBackground(app, profile).catch(err => {
-        console.error("Async email error:", err);
-      });
+
+      // Run background 
+      asyncTaskRunner(() =>
+        EmailService.sendToUser({
+          user_id: payload.application_by,
+          template: "applications/ongoing",
+          subject: "Your application has been submitted for review.",
+          data: { application: app, profile }
+        })
+      );
 
       return app;
     } catch (err) {
       await t.rollback();
       throw err;
-    }
-  }
-
-  async sendEmailInBackground(app, profile) {
-    try {
-      const creds = await mdl_UserCredentials.findOne({
-        where: { user_id: app.application_by }
-      });
-
-      if (!creds?.email) return;
-
-      const { html, subject } = await EmailTemplate.as_renderAll(
-        "applications/ongoing",
-        {
-          application: app,
-          profile,
-          subject: "Your application has been submitted for review."
-        }
-      );
-
-      await sendEmail({
-        to: creds.email,
-        subject,
-        html
-      });
-
-    } catch (err) {
-      console.error("Background email sending failed:", err);
     }
   }
 
@@ -82,38 +60,33 @@ class ApplicationService {
       this.io.emit('application:updated', app);
 
       if (payload.status && payload.status !== prevStatus) {
-        const creds = await mdl_UserCredentials.findOne({
-          where: { user_id: app.application_by }
-        });
+        let template = null;
+        let subject = null;
 
-        if (creds?.email) {
-          let template = null;
+        switch (payload.status) {
+          case 'approved':
+            template = 'applications/approval';
+            subject = 'Your application has been approved.';
+            break;
 
-          switch (payload.status) {
-            case 'approved':
-              template = 'applications/approval';
-              break;
+          case 'withdrawn':
+            template = 'applications/withdrawn';
+            subject = 'Your application has been withdrawn.';
+            break;
 
-            case 'withdrawn':
-              template = 'applications/withdrawn';
-              break;
+          default:
+            break;
+        }
 
-            default:
-              break;
-          }
-
-          if (template) {
-            const { html, subject } = await EmailTemplate.as_renderAll(template, {
-              application: app,
-              subject: `Your application has been ${payload.status}.`
-            });
-
-            await sendEmail({
-              to: creds.email,
+        if (template) {
+          asyncTaskRunner(() =>
+            EmailService.sendToUser({
+              user_id: app.application_by,
+              template,
               subject,
-              html
-            });
-          }
+              data: { application: app }
+            })
+          );
         }
       }
 

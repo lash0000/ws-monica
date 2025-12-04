@@ -8,16 +8,17 @@ const mime = require("mime-types");
 const mdl_UserProfile = require('../user_profile/user_profile.mdl');
 const CommentService = require('../comments/comment.srv');
 const { Op } = require('sequelize');
+const { asyncTaskRunner } = require('../../utils/async_task_runner.utils');
+const EmailService = require('../email/email.srv');
 
 module.exports = (io) => {
   const FileUploadService = FileUploadServiceFactory(io);
 
   class TicketService extends CommentService {
     constructor() {
-    super("ticket");
-    this.Ticket = mdl_Tickets;
+      super("ticket");
+      this.Ticket = mdl_Tickets;
     }
-
 
     async createTicket(req) {
       return new Promise((resolve, reject) => {
@@ -88,6 +89,20 @@ module.exports = (io) => {
             }
 
             await transaction.commit();
+
+            // Trying to have queue async task runner / background  
+            asyncTaskRunner(() =>
+              EmailService.sendToUser({
+                user_id: fields.user_id,
+                template: "tickets",
+                subject: "You have a new ticket created.",
+                data: {
+                  ticket,
+                  profile: userProfile
+                }
+              })
+            );
+
             io.emit("tickets:new", ticket);
             resolve({
               ticket,
@@ -327,7 +342,7 @@ module.exports = (io) => {
         console.error("Error counting blotter tickets:", error);
         throw error;
       }
-      }
+    }
 
     async MyCountTickets(user_id) {
       try {
@@ -385,10 +400,10 @@ module.exports = (io) => {
             }
           }),
           this.Ticket.count({
-              where: {
-                ...whereBase,
-                status: "pending"
-              }
+            where: {
+              ...whereBase,
+              status: "pending"
+            }
           })
         ]);
 
@@ -403,7 +418,7 @@ module.exports = (io) => {
         throw error;
       }
     }
-    
+
 
 
   }

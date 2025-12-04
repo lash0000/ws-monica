@@ -2,8 +2,8 @@ const mdl_Comments = require('./comment.mdl');
 const mdl_Tickets = require('../tickets/ticket.mdl');
 const mdl_UserCredentials = require('../user_creds/user_creds.mdl');
 const mdl_UserProfile = require('../user_profile/user_profile.mdl');
-const EmailTemplate = require('../../utils/email_template.utils');
-const { sendEmail } = require('../../utils/nodemailer.utils');
+const { asyncTaskRunner } = require('../../utils/async_task_runner.utils');
+const EmailService = require('../email/email.srv');
 
 class CommentService {
   constructor(category) {
@@ -11,11 +11,37 @@ class CommentService {
     this.category = category;
   }
 
-  // Add new comment
+  async notifyCommentedEntity(fullComment) {
+    if (!fullComment) return;
+    const commenterId = fullComment.commented_by;
+    const ticketOwnerId = fullComment?.Ticket_Details?.user_id;
+
+    // No owner? abort
+    if (!ticketOwnerId) return;
+
+    asyncTaskRunner(() =>
+      EmailService.sendToUser({
+        user_id: commenterId,
+        template: "ticket_comments/creator",
+        subject: `Your comment was added successfully mula sa Barangay Santa Monica.`,
+        data: { comment: fullComment.comment }
+      })
+    );
+
+    if (ticketOwnerId !== commenterId) {
+      asyncTaskRunner(() =>
+        EmailService.sendToUser({
+          user_id: ticketOwnerId,
+          template: "ticket_comments/recipient",
+          subject: `A new comment has been added to your ticket mula sa Barangay Santa Monica.`,
+          data: { comment: fullComment.comment }
+        })
+      );
+    }
+  }
 
   async addNewComment({ parent_id, commented_by, comment }) {
     try {
-      // Step 1: Create new comment
       const created = await mdl_Comments.create({
         parent_id,
         commented_by,
@@ -23,7 +49,6 @@ class CommentService {
         category: this.category
       });
 
-      // Step 2: Fetch full joined comment (VERY IMPORTANT)
       const fullComment = await mdl_Comments.findOne({
         where: { id: created.id },
         include: [
@@ -32,14 +57,13 @@ class CommentService {
           { model: mdl_UserProfile, as: 'UserProfile' }
         ]
       });
-
+      this.notifyCommentedEntity(fullComment);
       return fullComment;
     } catch (err) {
       throw new Error(`Failed to add comment: ${err.message}`);
     }
   }
 
-  // Update a comment by ID
   async updateComment(id, updates) {
     try {
       const existing = await mdl_Comments.findByPk(id);
