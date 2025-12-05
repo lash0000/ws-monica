@@ -14,7 +14,7 @@ const app = express();
 const unifiedCors = {
   origin: [
     "https://barangay-santa-monica.vercel.app",
-    "https://www.santa-monica.space",
+    "https://santa-monica.space",
     "http://localhost:5173"
   ],
   credentials: true,
