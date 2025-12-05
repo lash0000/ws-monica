@@ -1,7 +1,4 @@
 const TicketServiceFactory = require("./ticket.srv");
-const EmailTemplate = require('../../utils/email_template.utils');
-const { sendEmail } = require('../../utils/nodemailer.utils');
-const mdl_UserCredentials = require('../user_creds/user_creds.mdl');
 
 class TicketController {
   constructor(io) {
@@ -21,31 +18,6 @@ class TicketController {
       res.status(400).json({ error: err.message });
     }
   };
-
-  async sendTicketCreationEmail(ticket) {
-    try {
-      const credentials = await mdl_UserCredentials.findOne({
-        where: { user_id: ticket.user_id },
-        attributes: ["email"]
-      });
-      if (!credentials?.email) {
-        console.warn("No email found:", ticket.user_id);
-        return;
-      }
-      const { html, subject } = await EmailTemplate.as_renderAll("tickets", {
-        user: credentials,
-        ticket,
-        subject: "You have a new ticket issued sa ating Barangay Online Platform."
-      });
-      await sendEmail({
-        to: credentials.email,
-        subject,
-        html
-      });
-    } catch (err) {
-      console.error("[EmailJob] Error:", err);
-    }
-  }
 
   getAllTickets = async (req, res) => {
     try {
