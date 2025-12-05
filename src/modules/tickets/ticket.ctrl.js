@@ -10,10 +10,6 @@ class TicketController {
     try {
       const result = await this.TicketService.createTicket(req);
       res.status(201).json(result);
-      setTimeout(() => {
-        this.sendTicketCreationEmail(result.ticket);
-      }, 10);
-
     } catch (err) {
       res.status(400).json({ error: err.message });
     }
