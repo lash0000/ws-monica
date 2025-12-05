@@ -14,6 +14,7 @@ const app = express();
 const unifiedCors = {
   origin: [
     "https://barangay-santa-monica.vercel.app",
+    "https://www.santa-monica.space",
     "https://santa-monica.space",
     "http://localhost:5173"
   ],
@@ -33,6 +34,7 @@ const io = new Server(server, {
     origin: [
       "https://barangay-santa-monica.vercel.app",
       "https://www.santa-monica.space",
+      "https://santa-monica.space",
       "http://localhost:5173"
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
