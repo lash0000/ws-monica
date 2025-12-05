@@ -1,43 +1,29 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const dotenv = require("dotenv");
-
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_SERVICE,
-    pass: process.env.SMTP_APP,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("SMTP Transporter Error:", error);
-  } else {
-    console.log("SMTP Transporter Ready");
-  }
-});
+// Dummy transporter so existing code won't break.
+// It will NOT be used for sending emails.
+const transporter = {
+  verify: (cb) => cb?.(null, true),
+};
 
-const sendEmail = async (options) => {
-  const { to, subject, html } = options;
-
+const sendEmail = async ({ to, subject, html }) => {
   try {
-    const result = transporter.sendMail({
-      from: {
-        name: "Brgy. Santa Monica Services",
-        address: process.env.SMTP_SERVICE,
-      },
+    const result = await resend.emails.send({
+      from: `Brgy. Santa Monica Services <${process.env.RESEND_MAIL}>`,
       to,
       subject,
       html,
     });
 
+    console.log("[RESEND] Email result:", result);
     return result;
-  } catch (err) {
-    throw new Error(`Email sending failed: ${err.message}`);
+  } catch (error) {
+    console.error("[RESEND] Email sending failed:", error);
+    throw new Error(error.message);
   }
 };
 
