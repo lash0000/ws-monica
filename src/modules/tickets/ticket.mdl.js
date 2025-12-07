@@ -39,7 +39,7 @@ const mdl_Tickets = db_sequelize.define('Tickets', {
   status: {
     type: DataTypes.TEXT, // resolved / unresolved
     allowNull: false,
-    defaultValue: 'unresolved'
+    defaultValue: 'pending'
   },
   persons_involved: {
     type: DataTypes.TEXT, // "names only"
