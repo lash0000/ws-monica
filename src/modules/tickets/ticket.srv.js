@@ -190,12 +190,22 @@ module.exports = (io) => {
           const t = await mdl_Tickets.sequelize.transaction();
 
           try {
-            const ticket = await mdl_Tickets.findByPk(ticketId, { transaction: t });
+            const userProfile = await mdl_UserProfile.findOne({
+              where: { user_id: fields.user_id },
+              t
+            });
 
+            if (!userProfile) {
+              await t.rollback();
+              return reject({
+                message: "User profile does not exist. Complete profile first."
+              });
+            }
+
+            const ticket = await mdl_Tickets.findByPk(ticketId, { transaction: t });
             if (!ticket) throw new Error("Ticket not found");
 
             await ticket.update(fields, { transaction: t });
-
             for (const fileItem of newFiles) {
               await mdl_Files.create(
                 {
@@ -208,6 +218,19 @@ module.exports = (io) => {
             }
 
             await t.commit();
+
+            // Trying to have queue async task runner / background  
+            asyncTaskRunner(() =>
+              EmailService.sendToUser({
+                user_id: fields.user_id,
+                template: "ticket_updates",
+                subject: "We have a latest update from your ticket.",
+                data: {
+                  ticket,
+                  profile: userProfile
+                }
+              })
+            );
 
             io.emit("tickets:update", {
               ticket_id: ticketId,
