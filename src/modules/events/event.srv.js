@@ -1,9 +1,9 @@
-// TODO: Adddata and updateData with EmailService
-
 const mdl_Events = require('../events/event.mdl');
 const mdl_UserCredentials = require('../user_creds/user_creds.mdl');
 const mdl_UserProfile = require('../user_profile/user_profile.mdl');
 const sequelize = require('../../../config/db.config');
+const { asyncTaskRunner } = require('../../utils/async_task_runner.utils');
+const EmailService = require('../email/email.srv');
 
 class EventService {
   constructor(io) {
@@ -37,8 +37,10 @@ class EventService {
   }
 
   // Update Event
+
   async updateEvent(eventId, payload) {
     const t = await sequelize.transaction();
+
     try {
       const event = await mdl_Events.findByPk(eventId);
 
@@ -46,11 +48,44 @@ class EventService {
         throw new Error("Event not found");
       }
 
+      // Check if the event was previously unpublished
+      const wasPreviouslyPublished = event.is_published === true;
+
+      // Update event
       await event.update(payload, { transaction: t });
       await t.commit();
 
-      this.io.emit("EVENT_UPDATED", event);
+      // If this update toggles is_published → true for the first time
+      if (payload.is_published === true && !wasPreviouslyPublished) {
+        asyncTaskRunner(async () => {
+          const users = await mdl_UserCredentials.findAll({
+            attributes: ["email"],
+            where: { is_active: true }
+          });
 
+          const emails = users.map(u => u.email).filter(Boolean);
+
+          const eventData = {
+            category: event.category,
+            title: event.title,
+            description: event.description,
+            date: event.date,
+            location: event.location
+          };
+
+          for (const email of emails) {
+            await EmailService.sendEventAnnouncement({
+              email,
+              event: eventData
+            });
+          }
+
+          console.log("Event announcement broadcast completed.");
+        });
+      }
+
+      // Emit real-time update
+      this.io.emit("EVENT_UPDATED", event);
       return event;
     } catch (error) {
       await t.rollback();
