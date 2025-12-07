@@ -5,6 +5,19 @@ class ApplicationController {
     this.service = new ApplicationService(io);
   }
 
+  list_Application = async (req, res) => {
+    try {
+      const data = await this.service.countApplication();
+      res.status(200).json(data);
+    } catch (err) {
+      console.error("Error in list_Application:", err);
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve application counts",
+      });
+    }
+  };
+
   create_New_Application = async (req, res) => {
     try {
       const data = await this.service.createApplication(req.body);

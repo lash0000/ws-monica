@@ -11,6 +11,26 @@ class ApplicationService {
     this.io = io;
   }
 
+  async countApplication() {
+    try {
+      const statuses = ["for-review", "approved"];
+      const result = {};
+
+      for (const status of statuses) {
+        const count = await mdl_Applications.count({
+          where: { status }
+        });
+        result[status] = count;
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error("Error counting applications:", error);
+      throw error;
+    }
+  }
+
   async createApplication(payload) {
     const t = await sequelize.transaction();
 

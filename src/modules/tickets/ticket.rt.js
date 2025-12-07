@@ -13,6 +13,9 @@ module.exports = (io) => {
   router.get("/", f_authMiddleware, (req, res) =>
     controller.getAllTickets(req, res)
   );
+  router.get('/categories', f_authMiddleware, (req, res) =>
+    controller.countCategoryTickets(req, res)
+  )
   router.get("/blotter", f_authMiddleware, (req, res) =>
     controller.countBlotter(req, res)
   );
@@ -37,7 +40,8 @@ module.exports = (io) => {
   router.get("/user/blotter/status/:id", f_authMiddleware, (req, res) =>
     controller.myBlotterTicketsStatus(req, res)
   );
-  
+
+
   //all counts per category
 
 

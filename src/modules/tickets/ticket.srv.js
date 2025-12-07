@@ -399,7 +399,6 @@ module.exports = (io) => {
           user_id,
           category: {
             [Op.in]: ["Complaints", "Incident-Report"]
-            // or [Op.or]: ["Complaints", "Incident-Report"]
           }
         };
 
@@ -442,7 +441,32 @@ module.exports = (io) => {
       }
     }
 
+    async TicketCategoryCount() {
+      try {
+        const categories = [
+          "Healthcare",
+          "Infrastructure",
+          "Social-Services",
+          "Community",
+          "Administrative",
+          "Other"
+        ];
 
+        const response = {};
+        for (const cat of categories) {
+          const count = await this.Ticket.count({
+            where: { category: cat }
+          });
+          response[cat] = count;
+        }
+
+        return response;
+
+      } catch (error) {
+        console.error("Error counting ticket categories:", error);
+        throw error;
+      }
+    }
 
   }
 

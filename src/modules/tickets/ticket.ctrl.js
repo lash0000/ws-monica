@@ -138,6 +138,18 @@ class TicketController {
     }
   }
 
+  countCategoryTickets = async (req, res) => {
+    try {
+      const result = await this.TicketService.TicketCategoryCount();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to count all of those category from tickets",
+        error: error.message
+      });
+    }
+  }
+
   myCountBlotterTickets = async (req, res) => {
     try {
       const user_id = req.params.id;

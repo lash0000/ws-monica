@@ -6,6 +6,9 @@ module.exports = (io) => {
   const controller = new ApplicationController(io);
   const f_authMiddleware = require('../../middlewares/auth.mw');
 
+  router.get("/analytics", f_authMiddleware, (req, res) =>
+    controller.list_Application(req, res)
+  );
   router.post("/", f_authMiddleware, (req, res) =>
     controller.create_New_Application(req, res)
   );
