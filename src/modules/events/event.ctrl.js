@@ -25,6 +25,15 @@ class EventController {
     }
   };
 
+  getAllPublishedEvents = async (req, res) => {
+    try {
+      const events = await this.service.getAllPublishedEvents();
+      res.status(200).json({ success: true, events });
+    } catch (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
   getAllEvents = async (req, res) => {
     try {
       const events = await this.service.getAllEvents();

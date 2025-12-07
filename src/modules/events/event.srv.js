@@ -93,6 +93,25 @@ class EventService {
     }
   }
 
+  // List all *published* events only
+  async getAllPublishedEvents() {
+    return await mdl_Events.findAll({
+      where: { is_published: true },
+      include: [
+        {
+          model: mdl_UserCredentials,
+          as: "EventCreator",
+          include: [
+            {
+              model: mdl_UserProfile
+            }
+          ]
+        }
+      ],
+      order: [["createdAt", "DESC"]]
+    });
+  }
+
   // List all events
   async getAllEvents() {
     return await mdl_Events.findAll({

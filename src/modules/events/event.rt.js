@@ -9,6 +9,9 @@ module.exports = (io) => {
   router.post("/", f_authMiddleware, (req, res) =>
     controller.createEvent(req, res)
   );
+  router.get("/published", f_authMiddleware, (req, res) =>
+    controller.getAllPublishedEvents(req, res)
+  );
   router.get("/user/:id", f_authMiddleware, (req, res) =>
     controller.getAllMyEvents(req, res)
   );
