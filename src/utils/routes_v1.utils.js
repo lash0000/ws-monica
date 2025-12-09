@@ -9,6 +9,7 @@ module.exports = (io) => {
   const userApplications = require('../modules/applications/application.rt')(io);
   const userAppointments = require('../modules/appointments/appointment.rt')(io);
   const userEvents = require('../modules/events/event.rt')(io);
+  const AIReview = require('../modules/ai/ai.rt')(io);
 
   router.use('/user-creds', userCredsRoutes);
   router.use('/files', userFileRoutes);
@@ -17,6 +18,7 @@ module.exports = (io) => {
   router.use('/applications', userApplications);
   router.use('/appointments', userAppointments);
   router.use('/events', userEvents);
+  router.use('/ai', AIReview);
 
   return router;
 };
