@@ -1,0 +1,32 @@
+{
+  "name": "ws-monica",
+  "version": "1.0.0",
+  "description": "monica naging commonwealth but it's automation anyway",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lash0000/ws-monica.git"
+  },
+  "keywords": [],
+  "author": "lash0000",
+  "license": "Unlicense",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/lash0000/ws-monica/issues"
+  },
+  "homepage": "https://github.com/lash0000/ws-monica#readme",
+  "dependencies": {
+    "axios": "^1.13.6",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
